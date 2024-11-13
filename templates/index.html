@@ -8,34 +8,38 @@
 </head>
 <body>
     <div class="container">
-        <h1>SwapSnap</h1>
-        <p>Zamień Snapa z kolego</p>
+        <!-- Header Section -->
+        <header class="header">
+            <h1>SwapSnap</h1>
+            <p class="subtitle">Zamień Snapa z kolego</p>
+        </header>
 
-        <!-- Photo upload form -->
-        <div class="upload-section">
-            <input type="file" id="file-upload" accept="image/*">
-            <button onclick="uploadPhoto()">Wyślij!</button>
+        <!-- Photo Upload Section -->
+        <div class="upload-section card">
+            <h2>Dodaj swoje zdjęcie</h2>
+            <input type="file" id="file-upload" accept="image/*" class="upload-input">
+            <button onclick="uploadPhoto()" class="button upload-button">Wyślij!</button>
         </div>
 
-        <div id="uploaded-photo" class="uploaded-photo"></div>
+        <!-- Random Photo Section -->
+        <div id="random-photo-section" class="card">
+            <h2>Losowe Zdjęcie</h2>
+            <div id="random-photo" class="photo-container"></div>
+            <div id="reactions" class="reactions-container"></div>
 
-        <!-- Random photo section -->
-        <div id="random-photo-section">
-            <button onclick="getRandomPhoto()">Pokaż losowe zdjęcie</button>
-            <div id="random-photo"></div>
-            <div id="reactions" class="reactions">
-                <!-- Emoji reactions will appear here -->
+            <!-- Reaction Button with Pop-up -->
+            <div class="reaction-popup-container">
+                <button class="like-button">👍 Like</button>
+                <div class="reaction-popup">
+                    <span class="emoji" onclick="react('👍')">👍</span>
+                    <span class="emoji" onclick="react('❤️')">❤️</span>
+                    <span class="emoji" onclick="react('😂')">😂</span>
+                    <span class="emoji" onclick="react('😱')">😱</span>
+                    <span class="emoji" onclick="react('😡')">😡</span>
+                </div>
             </div>
-        </div>
 
-        <!-- Reaction buttons -->
-        <div id="reaction-section" style="display:none;">
-            <h3>Zareaguj!</h3>
-            <button onclick="react('👍')">👍</button>
-            <button onclick="react('❤️')">❤️</button>
-            <button onclick="react('😂')">😂</button>
-            <button onclick="react('😱')">😱</button>
-            <button onclick="react('😡')">😡</button>
+            <button onclick="getRandomPhoto()" class="button show-photo-button">Pokaż losowe zdjęcie</button>
         </div>
     </div>
 

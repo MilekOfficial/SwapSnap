@@ -1,146 +1,128 @@
+/* General Reset */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-}
-
-.container {
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-h1 {
-    color: #2c3e50;
-}
-
-.upload-section {
-    margin: 20px;
-}
-
-#uploaded-photo img {
-    max-width: 100%;
-    height: auto;
-    margin-top: 10px;
-}
-
-#random-photo-section {
-    margin-top: 30px;
-}
-
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-button:hover {
-    background-color: #2980b9;
-}
-
-#reactions button {
-    padding: 10px;
-    margin: 5px;
-    font-size: 20px;
-}
-/* General styles */
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
+    background-color: #f0f2f5;
     margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
 }
 
+/* Container */
 .container {
-    text-align: center;
-    max-width: 800px;
+    max-width: 600px;
     width: 100%;
+    margin: 20px auto;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-h1 {
-    color: #2c3e50;
+/* Header */
+.header {
+    text-align: center;
     margin-bottom: 20px;
 }
-
-/* Upload section */
-.upload-section {
-    margin: 20px;
+.header h1 {
+    font-size: 2em;
+    color: #1877f2;
+}
+.header .subtitle {
+    font-size: 1em;
+    color: #606770;
 }
 
-#uploaded-photo img {
-    max-width: 100%;
-    height: auto;
-    margin-top: 10px;
+/* Card */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    padding: 15px;
 }
 
-/* Random photo section */
-#random-photo-section {
-    margin-top: 30px;
+/* Buttons */
+.button {
+    background-color: #1877f2;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #165dbb;
+}
+
+/* Photo Container */
+.photo-container img {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#random-photo img {
-    max-width: 100%;
     height: auto;
     border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    margin-top: 20px;
-    max-height: 500px; /* Limit the height */
-    object-fit: contain; /* Ensure the image scales proportionally */
+    margin-bottom: 10px;
 }
 
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #2980b9;
-}
-
-/* Emoji buttons */
-#reaction-section {
-    margin-top: 20px;
-}
-
-#reaction-section button {
-    padding: 10px;
-    margin: 5px;
-    font-size: 24px;
-    background-color: #f39c12;
-    border: none;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease;
-}
-
-#reaction-section button:hover {
-    background-color: #e67e22;
-}
-
-#reactions {
+/* Reactions */
+.reactions-container {
     margin-top: 10px;
-    font-size: 18px;
-    color: #555;
-    font-weight: bold;
+    background: #f0f2f5;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* Reaction Popup */
+.reaction-popup-container {
+    position: relative;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.like-button {
+    font-size: 1em;
+    background-color: #e7f3ff;
+    border: 1px solid #d0e2ff;
+    border-radius: 20px;
+    padding: 5px 15px;
+    color: #1877f2;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.like-button:hover {
+    background-color: #d0e2ff;
+}
+
+/* Popup Reactions */
+.reaction-popup {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    padding: 5px 10px;
+    gap: 10px;
+    display: none; /* Initially hidden */
+}
+
+.reaction-popup-container:hover .reaction-popup {
+    display: flex; /* Show popup on hover */
+}
+
+.emoji {
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.emoji:hover {
+    transform: scale(1.3);
 }
