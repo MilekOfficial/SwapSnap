@@ -21,13 +21,16 @@
 
         <!-- Random photo section -->
         <div id="random-photo-section">
-            <button onclick="getRandomPhoto()">Dla debug</button>
+            <button onclick="getRandomPhoto()">Pokaż losowe zdjęcie</button>
             <div id="random-photo"></div>
-            <div id="reactions"></div>
+            <div id="reactions" class="reactions">
+                <!-- Emoji reactions will appear here -->
+            </div>
         </div>
 
+        <!-- Reaction buttons -->
         <div id="reaction-section" style="display:none;">
-            <h3>Zareaguj! (nie działa)</h3>
+            <h3>Zareaguj!</h3>
             <button onclick="react('👍')">👍</button>
             <button onclick="react('❤️')">❤️</button>
             <button onclick="react('😂')">😂</button>

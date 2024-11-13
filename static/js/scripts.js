@@ -1,9 +1,15 @@
-// Upload the photo
+const reactionsDiv = document.getElementById('reactions');
+const randomPhotoDiv = document.getElementById('random-photo');
+const reactionSection = document.getElementById('reaction-section');
+let currentPhotoUrl = '';
+
+// Function to upload a photo
 function uploadPhoto() {
     const fileInput = document.getElementById('file-upload');
     const file = fileInput.files[0];
+
     if (!file) {
-        alert('Please select a file to upload');
+        alert('Wybierz plik do przesłania.');
         return;
     }
 
@@ -12,72 +18,93 @@ function uploadPhoto() {
 
     fetch('/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.photo_url) {
-            document.getElementById('uploaded-photo').innerHTML = '';  // Clear the uploaded photo display
-            getRandomPhoto(); // Immediately show random photo after upload
-        }
-    })
-    .catch(error => console.error('Error uploading photo:', error));
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+            } else {
+                alert('Błąd podczas przesyłania.');
+            }
+        })
+        .catch(error => console.error('Error:', error));
 }
 
-// Fetch a random photo and display it
+// Function to fetch a random photo and its reactions
 function getRandomPhoto() {
-    fetch('/random_photo')
-    .then(response => response.json())
-    .then(data => {
-        if (data.photo_url) {
-            // Display random photo
-            document.getElementById('random-photo').innerHTML = `<img src="${data.photo_url}" alt="Random Photo">`;
+    fetch('/random_photo', {
+        method: 'GET',
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
 
-            // Display the reactions
-            showReactions(data.reactions);
+            // Display the random photo
+            currentPhotoUrl = data.photo_url;
+            randomPhotoDiv.innerHTML = `<img src="${currentPhotoUrl}" alt="Losowe zdjęcie" />`;
+
+            // Display reactions
+            const reactions = data.reactions;
+            displayReactions(reactions);
 
             // Show the reaction section
-            document.getElementById('reaction-section').style.display = 'block';
-        }
-    })
-    .catch(error => console.error('Error fetching random photo:', error));
+            reactionSection.style.display = 'block';
+        })
+        .catch(error => console.error('Error:', error));
 }
 
-// Display the reactions on the random photo
-function showReactions(reactions) {
-    const reactionsDiv = document.getElementById('reactions');
+// Function to display reactions
+function displayReactions(reactions) {
+    reactionsDiv.innerHTML = ''; // Clear previous reactions
+
     if (reactions.length === 0) {
-        reactionsDiv.innerHTML = 'No reactions yet';
-    } else {
-        reactionsDiv.innerHTML = reactions.join(' ');
+        reactionsDiv.innerHTML = '<p>Brak reakcji dla tego zdjęcia.</p>';
+        return;
     }
+
+    const reactionsList = document.createElement('ul');
+    reactionsList.classList.add('reactions-list');
+
+    reactions.forEach(reaction => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${reaction.emoji} przez użytkownika ${reaction.user_id}`;
+        reactionsList.appendChild(listItem);
+    });
+
+    reactionsDiv.appendChild(reactionsList);
 }
 
-// React with an emoji
-// React with an emoji
-// React with an emoji
+// Function to react to the current photo
 function react(emoji) {
-    const randomPhoto = document.getElementById('random-photo').querySelector('img');
-    if (!randomPhoto) return;
+    if (!currentPhotoUrl) {
+        alert('Nie wybrano zdjęcia.');
+        return;
+    }
 
-    const photoUrl = randomPhoto.src;
-
-    // Ensure we are passing the correct photo_url and emoji
     fetch('/react', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ photo_url: photoUrl, emoji: emoji })
+        body: JSON.stringify({
+            photo_url: currentPhotoUrl,
+            emoji: emoji,
+        }),
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            // Refresh the random photo to include the new reaction
-            getRandomPhoto();
-        } else {
-            console.error('Error adding reaction:', data.error || 'Unknown error');
-        }
-    })
-    .catch(error => console.error('Error reacting to photo:', error));
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            // Update displayed reactions
+            const reactions = data.reactions;
+            displayReactions(reactions);
+        })
+        .catch(error => console.error('Error:', error));
 }
