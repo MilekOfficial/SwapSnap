@@ -76,13 +76,14 @@ body {
     border-radius: 10px;
 }
 
-/* Reaction Popup */
+/* Reaction Popup Container (Always visible) */
 .reaction-popup-container {
     position: relative;
     display: inline-block;
     margin-top: 10px;
 }
 
+/* Like Button */
 .like-button {
     font-size: 1em;
     background-color: #e7f3ff;
@@ -101,7 +102,7 @@ body {
 /* Popup Reactions */
 .reaction-popup {
     position: absolute;
-    bottom: 40px;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
     background: #fff;
@@ -110,13 +111,18 @@ body {
     display: flex;
     padding: 5px 10px;
     gap: 10px;
-    display: none; /* Initially hidden */
+    visibility: hidden; /* Initially hidden */
+    opacity: 0;
+    transition: visibility 0.3s, opacity 0.3s ease;
 }
 
+/* Show reaction popup on like button hover */
 .reaction-popup-container:hover .reaction-popup {
-    display: flex; /* Show popup on hover */
+    visibility: visible;
+    opacity: 1;
 }
 
+/* Emoji Styling */
 .emoji {
     font-size: 1.5em;
     cursor: pointer;

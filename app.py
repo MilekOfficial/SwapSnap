@@ -96,35 +96,39 @@ def random_photo():
 @app.route('/react', methods=['POST'])
 def react():
     try:
-        # Get the request data
+        # Get request data
         data = request.get_json()
         photo_url = data.get('photo_url')
         emoji = data.get('emoji')
 
-        # Validate input
         if not photo_url or not emoji:
             return jsonify({'error': 'Both photo_url and emoji are required'}), 400
 
-        # Validate emoji
         if emoji not in EMOJI_REACTIONS:
             return jsonify({'error': f'Invalid emoji. Valid emojis are: {", ".join(EMOJI_REACTIONS)}'}), 400
 
+        # Load reactions
+        reactions = load_reactions()
+
         # Get user ID
         user_id = session.get('user_id', str(datetime.now().timestamp()))
-        session['user_id'] = user_id  # Save user ID in session
+        session['user_id'] = user_id
 
-        # Update reactions
+        # Add or update reaction
         if photo_url not in reactions:
             reactions[photo_url] = {}
         reactions[photo_url][user_id] = emoji
 
-        # Return updated reactions
-        current_reactions = [{'user_id': uid, 'emoji': emj} for uid, emj in reactions[photo_url].items()]
-        return jsonify({'message': 'Reaction added successfully!', 'reactions': current_reactions}), 200
+        # Save updated reactions
+        save_reactions(reactions)
+
+        # Format and return updated reactions
+        current_reactions = reactions[photo_url]
+        formatted_reactions = [{'user_id': uid, 'emoji': e} for uid, e in current_reactions.items()]
+        return jsonify({'message': 'Reaction added successfully!', 'reactions': formatted_reactions}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-
 
 if __name__ == '__main__':
     app.run(debug=True)

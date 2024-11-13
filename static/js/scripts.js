@@ -80,42 +80,31 @@ function displayReactions(reactions) {
 
 // Function to react to the current photo
 function react(emoji) {
-    const randomPhotoElement = document.getElementById("random-photo");
-    const reactionsContainer = document.getElementById("reactions");
-
-    if (!randomPhotoElement || !randomPhotoElement.firstChild) {
-        console.error("No photo to react to.");
+    if (!currentPhotoUrl) {
+        alert('Nie wybrano zdjęcia.');
         return;
     }
 
-    const photoUrl = randomPhotoElement.firstChild.src;
-
-    // Send reaction to the backend
-    fetch("/react", {
-        method: "POST",
+    fetch('/react', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ photo_url: photoUrl, emoji: emoji }),
+        body: JSON.stringify({
+            photo_url: currentPhotoUrl,
+            emoji: emoji,
+        }),
     })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("Failed to send reaction.");
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
             }
-            return response.json();
+
+            // Update displayed reactions
+            const reactions = data.reactions;
+            displayReactions(reactions);
         })
-        .then((data) => {
-            if (data.reactions) {
-                // Update reactions UI
-                reactionsContainer.innerHTML = "";
-                data.reactions.forEach((reaction) => {
-                    const listItem = document.createElement("li");
-                    listItem.textContent = `${reaction.user_id}: ${reaction.emoji}`;
-                    reactionsContainer.appendChild(listItem);
-                });
-            }
-        })
-        .catch((error) => {
-            console.error("Error reacting:", error);
-        });
+        .catch(error => console.error('Error:', error));
 }
