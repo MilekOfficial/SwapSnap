@@ -1,0 +1,146 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+h1 {
+    color: #2c3e50;
+}
+
+.upload-section {
+    margin: 20px;
+}
+
+#uploaded-photo img {
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+}
+
+#random-photo-section {
+    margin-top: 30px;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#reactions button {
+    padding: 10px;
+    margin: 5px;
+    font-size: 20px;
+}
+/* General styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    margin: 0;
+}
+
+.container {
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+}
+
+h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+/* Upload section */
+.upload-section {
+    margin: 20px;
+}
+
+#uploaded-photo img {
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+}
+
+/* Random photo section */
+#random-photo-section {
+    margin-top: 30px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#random-photo img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin-top: 20px;
+    max-height: 500px; /* Limit the height */
+    object-fit: contain; /* Ensure the image scales proportionally */
+}
+
+button {
+    padding: 10px 20px;
+    margin: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+/* Emoji buttons */
+#reaction-section {
+    margin-top: 20px;
+}
+
+#reaction-section button {
+    padding: 10px;
+    margin: 5px;
+    font-size: 24px;
+    background-color: #f39c12;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+#reaction-section button:hover {
+    background-color: #e67e22;
+}
+
+#reactions {
+    margin-top: 10px;
+    font-size: 18px;
+    color: #555;
+    font-weight: bold;
+}

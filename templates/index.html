@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwapSnap - Photo Share</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>SwapSnap</h1>
+        <p>Zamień Snapa z kolego</p>
+
+        <!-- Photo upload form -->
+        <div class="upload-section">
+            <input type="file" id="file-upload" accept="image/*">
+            <button onclick="uploadPhoto()">Wyślij!</button>
+        </div>
+
+        <div id="uploaded-photo" class="uploaded-photo"></div>
+
+        <!-- Random photo section -->
+        <div id="random-photo-section">
+            <button onclick="getRandomPhoto()">Dla debug</button>
+            <div id="random-photo"></div>
+            <div id="reactions"></div>
+        </div>
+
+        <div id="reaction-section" style="display:none;">
+            <h3>Zareaguj! (nie działa)</h3>
+            <button onclick="react('👍')">👍</button>
+            <button onclick="react('❤️')">❤️</button>
+            <button onclick="react('😂')">😂</button>
+            <button onclick="react('😱')">😱</button>
+            <button onclick="react('😡')">😡</button>
+        </div>
+    </div>
+
+    <script src="static/js/scripts.js"></script>
+</body>
+</html>
