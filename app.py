@@ -5,9 +5,13 @@ import random
 from datetime import datetime
 from threading import Timer
 from werkzeug.utils import secure_filename
+from flask_minify import Minify
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Enable Flask-Minify for response optimization
+Minify(app=app, html=True, js=True, cssless=True)
 
 # Secret key for session management
 app.secret_key = 'your_secret_key_here'
@@ -153,4 +157,4 @@ def react():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000)
+    app.run(debug=True, host="0.0.0.0", port=8000)
