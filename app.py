@@ -1,29 +1,28 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, session
 import os
-import json
 import random
 from datetime import datetime
 from threading import Timer
 from werkzeug.utils import secure_filename
-from flask_minify import Minify
+from tinydb import TinyDB, Query
 
 # Initialize Flask app
 app = Flask(__name__)
-
-# Enable Flask-Minify for response optimization
-Minify(app=app, html=True, js=True, cssless=True)
 
 # Secret key for session management
 app.secret_key = 'your_secret_key_here'
 
 # Setup paths and constants
 UPLOAD_FOLDER = 'static/uploads'
-EMOJIS_FILE = 'emojis.json'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
 EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
 
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Initialize TinyDB for storing reactions
+db = TinyDB('reactions.json')
+reactions_table = db.table('reactions')
 
 # Global photo list
 all_photos = []
@@ -38,21 +37,6 @@ def update_photo_list():
 
 # Initialize the photo list update
 update_photo_list()
-
-
-# Helper functions for managing reactions
-def load_reactions():
-    """Load reactions from the emojis.json file."""
-    if os.path.exists(EMOJIS_FILE):
-        with open(EMOJIS_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-
-def save_reactions(reactions):
-    """Save reactions to the emojis.json file."""
-    with open(EMOJIS_FILE, 'w') as f:
-        json.dump(reactions, f)
 
 
 # Serve uploaded images from the static folder
@@ -107,12 +91,12 @@ def random_photo():
     random_photo_url = random.choice(available_photos)
     session['last_shown_photo'] = random_photo_url
 
-    # Load current reactions
-    reactions = load_reactions()
-    current_reactions = reactions.get(random_photo_url, {})
+    # Query reactions for the selected photo
+    Reaction = Query()
+    current_reactions = reactions_table.search(Reaction.photo_url == random_photo_url)
 
     # Format reactions
-    formatted_reactions = [{'user_id': user, 'emoji': emoji} for user, emoji in current_reactions.items()]
+    formatted_reactions = [{'user_id': r['user_id'], 'emoji': r['emoji']} for r in current_reactions]
 
     return jsonify({'photo_url': random_photo_url, 'reactions': formatted_reactions}), 200
 
@@ -132,24 +116,25 @@ def react():
         if emoji not in EMOJI_REACTIONS:
             return jsonify({'error': f'Invalid emoji. Valid emojis are: {", ".join(EMOJI_REACTIONS)}'}), 400
 
-        # Load reactions
-        reactions = load_reactions()
-
         # Get user ID
         user_id = session.get('user_id', str(datetime.now().timestamp()))
         session['user_id'] = user_id
 
-        # Add or update reaction
-        if photo_url not in reactions:
-            reactions[photo_url] = {}
-        reactions[photo_url][user_id] = emoji
+        # Check if reaction already exists
+        Reaction = Query()
+        existing_reaction = reactions_table.get((Reaction.photo_url == photo_url) & (Reaction.user_id == user_id))
 
-        # Save updated reactions
-        save_reactions(reactions)
+        if existing_reaction:
+            # Update existing reaction
+            reactions_table.update({'emoji': emoji}, doc_ids=[existing_reaction.doc_id])
+        else:
+            # Add new reaction
+            reactions_table.insert({'photo_url': photo_url, 'user_id': user_id, 'emoji': emoji})
 
-        # Format and return updated reactions
-        current_reactions = reactions[photo_url]
-        formatted_reactions = [{'user_id': uid, 'emoji': e} for uid, e in current_reactions.items()]
+        # Query updated reactions for the photo
+        current_reactions = reactions_table.search(Reaction.photo_url == photo_url)
+        formatted_reactions = [{'user_id': r['user_id'], 'emoji': r['emoji']} for r in current_reactions]
+
         return jsonify({'message': 'Reaction added successfully!', 'reactions': formatted_reactions}), 200
 
     except Exception as e:
@@ -157,4 +142,4 @@ def react():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000)
