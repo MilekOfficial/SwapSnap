@@ -3,6 +3,7 @@ import os
 import json
 import random
 from datetime import datetime
+from threading import Timer
 from werkzeug.utils import secure_filename
 
 # Initialize Flask app
@@ -20,6 +21,21 @@ EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Global photo list
+all_photos = []
+
+
+def update_photo_list():
+    """Refresh the global list of all uploaded photos."""
+    global all_photos
+    all_photos = [f'/uploads/{f}' for f in os.listdir(UPLOAD_FOLDER) if f.lower().endswith(tuple(ALLOWED_EXTENSIONS))]
+    Timer(60, update_photo_list).start()  # Refresh every 60 seconds
+
+
+# Initialize the photo list update
+update_photo_list()
+
+
 # Helper functions for managing reactions
 def load_reactions():
     """Load reactions from the emojis.json file."""
@@ -28,15 +44,18 @@ def load_reactions():
             return json.load(f)
     return {}
 
+
 def save_reactions(reactions):
     """Save reactions to the emojis.json file."""
     with open(EMOJIS_FILE, 'w') as f:
         json.dump(reactions, f)
 
+
 # Serve uploaded images from the static folder
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
 
 @app.route('/')
 def index():
@@ -45,16 +64,17 @@ def index():
         session['user_id'] = str(datetime.now().timestamp())
     return render_template('index.html')
 
+
 # Endpoint to upload a photo
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-    
+
     if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS:
         filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
         filepath = os.path.join(UPLOAD_FOLDER, filename)
@@ -63,14 +83,14 @@ def upload():
     else:
         return jsonify({'error': 'Invalid file type'}), 400
 
+
 # Endpoint to get a random photo
 @app.route('/random_photo', methods=['GET'])
 def random_photo():
-    # Scan the entire uploads folder for photos
-    all_photos = [f'/uploads/{f}' for f in os.listdir(UPLOAD_FOLDER) if f.lower().endswith(tuple(ALLOWED_EXTENSIONS))]
+    global all_photos
     if not all_photos:
         return jsonify({'error': 'No photos uploaded yet'}), 400
-    
+
     # Get the last shown photo from session
     last_shown_photo = session.get('last_shown_photo')
 
@@ -91,6 +111,7 @@ def random_photo():
     formatted_reactions = [{'user_id': user, 'emoji': emoji} for user, emoji in current_reactions.items()]
 
     return jsonify({'photo_url': random_photo_url, 'reactions': formatted_reactions}), 200
+
 
 # Endpoint to react to a photo
 @app.route('/react', methods=['POST'])
@@ -129,6 +150,7 @@ def react():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=8000)
