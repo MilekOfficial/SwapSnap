@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, session
+from flask import Flask, render_template, request, jsonify, send_file, session
 import os
 import random
 from datetime import datetime
@@ -42,7 +42,8 @@ update_photo_list()
 # Serve uploaded images from the static folder
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    return send_file(filepath, cache_timeout=3600)  # Cache for 1 hour
 
 
 @app.route('/')
@@ -142,4 +143,4 @@ def react():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8000)
+    app.run(debug=False, host="0.0.0.0", port=8000)
