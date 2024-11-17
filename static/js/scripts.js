@@ -10,7 +10,7 @@ function uploadPhoto() {
     let file = fileInput.files[0];
 
     if (!file) {
-        alert("Proszę wybrać zdjęcie.");
+        alert("Add photo.");
         return;
     }
 
@@ -32,7 +32,7 @@ function uploadPhoto() {
         }
     })
     .catch(error => {
-        alert("Wystąpił błąd podczas wysyłania zdjęcia.");
+        alert("Error.");
     });
 }
 
@@ -54,11 +54,11 @@ function getRandomPhoto() {
                 return `<span class="emoji">${reaction.emoji}</span>`;
             }).join(" ");
         } else {
-            alert("Brak dostępnych zdjęć.");
+            alert("Error code 1.");
         }
     })
     .catch(error => {
-        alert("Wystąpił błąd podczas pobierania losowego zdjęcia.");
+        alert("Error code 2.");
     });
 }
 
@@ -94,7 +94,7 @@ function displayReactions(reactions) {
     reactionsDiv.innerHTML = ''; // Clear previous reactions
 
     if (reactions.length === 0) {
-        reactionsDiv.innerHTML = '<p>Brak reakcji dla tego zdjęcia.</p>';
+        reactionsDiv.innerHTML = '<p>No reactions.</p>';
         return;
     }
 
@@ -103,7 +103,7 @@ function displayReactions(reactions) {
 
     reactions.forEach(reaction => {
         const listItem = document.createElement('li');
-        listItem.textContent = `${reaction.emoji} przez użytkownika ${reaction.user_id}`;
+        listItem.textContent = `${reaction.emoji} from user ${reaction.user_id}`;
         reactionsList.appendChild(listItem);
     });
 
@@ -113,7 +113,7 @@ function displayReactions(reactions) {
 // Function to react to the current photo
 function react(emoji) {
     if (!currentPhotoUrl) {
-        alert('Nie wybrano zdjęcia.');
+        alert('Dont have photo.');
         return;
     }
 
