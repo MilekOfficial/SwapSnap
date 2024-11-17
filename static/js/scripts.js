@@ -2,7 +2,7 @@ const reactionsDiv = document.getElementById('reactions');
 const randomPhotoDiv = document.getElementById('random-photo');
 const reactionSection = document.getElementById('reaction-section');
 let currentPhotoUrl = '';
-const imgbbApiKey = 'your_imgbb_api_key_here'; // Replace with your ImgBB API key
+const imgbbApiKey = 'd7b117945f830b61ece628f1705dc4bc'; // Replace with your ImgBB API key
 
 // Function to upload a photo to ImgBB
 function uploadPhoto() {
