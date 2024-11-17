@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Change to a secure secret key
 
 # ImgBB API Key (replace with your actual API key)
-IMGBB_API_KEY = "your_imgbb_api_key_here"
+IMGBB_API_KEY = "d7b117945f830b61ece628f1705dc4bc"
 
 # Reactions file to store emoji reactions
 EMOJIS_FILE = 'emojis.json'
