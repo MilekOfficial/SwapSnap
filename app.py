@@ -53,13 +53,23 @@ def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
-def upload_file():
+def upload():
+    """Endpoint to upload a photo."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
     file = request.files['file']
-    if file:
-        file_path = os.path.join(app.config['static/uploads'], file.filename)
-        file.save(file_path)
-        return 'File uploaded successfully', 200
-    return 'Upload failed', 400
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        return jsonify({'message': 'File uploaded successfully!', 'photo_url': f'/uploads/{filename}'}), 200
+    else:
+        return jsonify({'error': 'Invalid file type'}), 400
+
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
