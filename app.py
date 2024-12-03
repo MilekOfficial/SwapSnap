@@ -1,13 +1,18 @@
-from flask import Flask, render_template, request, jsonify, session, send_from_directory
-import os
 import json
+import os
 import random
 from datetime import datetime
+
+from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
+
+load_dotenv()
+print(powi)
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Change to a secure secret key
+app.secret_key = 'Hey'  # Change to a secure secret key
 
 # Directory for uploaded files
 UPLOAD_FOLDER = 'static/uploads'

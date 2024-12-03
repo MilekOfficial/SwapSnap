@@ -2,3 +2,4 @@ flask
 flask-minify
 tinydb
 requests
+python-dotenv
