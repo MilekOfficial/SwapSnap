@@ -3,12 +3,11 @@ import os
 import random
 from datetime import datetime
 
-from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
 
-load_dotenv()
-print(powi)
+test = os.getenv('powi')
+print(test)
 
 # Initialize Flask app
 app = Flask(__name__)
