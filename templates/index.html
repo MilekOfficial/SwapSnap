@@ -51,14 +51,19 @@
     </div>
     <script src="static/js/scripts.js"></script>
     <script>
-        Dropzone.options.fileDropzone = {
+      Dropzone.options.fileDropzone = {
     maxFilesize: 5, // Maximum file size in MB
     acceptedFiles: 'image/*',
     init: function () {
         this.on("success", function (file, response) {
+            alert("File uploaded successfully!");
             getRandomPhoto(); // Trigger the function after a successful upload
         });
+        this.on("error", function (file, errorMessage) {
+            alert("Upload failed: " + errorMessage);
+        });
     }
-    </script>
+};
+  </script>
 </body>
 </html>
