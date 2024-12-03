@@ -53,7 +53,11 @@
     <script>
         Dropzone.options.fileDropzone = {
     maxFilesize: 5, // Maximum file size in MB
-    acceptedFiles: 'image/*', // Accept only image files
+    acceptedFiles: 'image/*',
+    init: function () {
+        this.on("success", function (file, response) {
+            getRandomPhoto(); // Trigger the function after a successful upload
+        });
     }
     </script>
 </body>
