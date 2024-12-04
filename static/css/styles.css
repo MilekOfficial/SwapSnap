@@ -3,7 +3,7 @@
 *::before,
 *::after {
     box-sizing: border-box;
-    border: none;
+    border: none !important;
 }
 
 body {
