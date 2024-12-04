@@ -144,7 +144,7 @@ function everythingDoneAlert() {
             alertDiv.className = 'alert alert-success alert-dismissible fade show';
             alertDiv.role = 'alert';
             alertDiv.innerHTML = `
-                <strong>Everything's Done!</strong> Your tasks have been successfully completed.
+                <strong>File Uploded!</strong> Thank's for using SwapSnap.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
 
