@@ -69,7 +69,10 @@ def upload():
         return jsonify({'message': 'File uploaded successfully!', 'photo_url': f'/uploads/{filename}'}), 200
     else:
         return jsonify({'error': 'Invalid file type'}), 400
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
