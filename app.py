@@ -10,7 +10,7 @@ test = os.getenv('powi')
 print(test)
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask("SwapSnap")
 app.secret_key = 'Hey'  # Change to a secure secret key
 
 # Directory for uploaded files
