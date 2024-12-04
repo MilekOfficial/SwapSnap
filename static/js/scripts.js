@@ -58,10 +58,6 @@ function getRandomPhoto() {
             // Show the reaction section
             reactionSection.style.display = 'block';
         })
-        .catch(error => {
-            console.error('Error fetching random photo:', error);
-            alert("An error occurred while fetching a random photo.");
-        });
 }
 
 // Function to display reactions
