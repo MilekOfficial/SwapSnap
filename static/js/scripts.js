@@ -118,21 +118,23 @@ function react(emoji) {
             alert("An error occurred while submitting your reaction.");
         });
 }
+function triggerAlert(message) {
+    // Create the alert div
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-warning alert-dismissible fade show';
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
 
-function showElement(selector) {
-    // Find the element by the provided selector
-    const element = document.querySelector(selector);
-    
-    if (element) {
-        // Make the element visible
-        element.style.display = 'block'; // or 'flex', 'grid', etc., depending on your layout
-        element.style.visibility = 'visible';
-        element.style.opacity = '1'; // Useful if using a fade-in effect
-    } else {
-        console.error(`Element not found with selector: ${selector}`);
-    }
+    // Append the alert to the alert-container
+    const alertContainer = document.getElementById('alert-container');
+    alertContainer.appendChild(alertDiv);
+
+    // Optional: Automatically remove the alert after a few seconds
+    setTimeout(() => {
+        alertDiv.classList.remove('show');
+        alertDiv.addEventListener('transitionend', () => alertDiv.remove());
+    }, 5000); // 5 seconds
 }
-
-// Example usage:
-// Assuming you have an element with the id "myElement" that is hidden
-
