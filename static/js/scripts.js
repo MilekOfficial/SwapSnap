@@ -138,3 +138,23 @@ function triggerAlert(message) {
         alertDiv.addEventListener('transitionend', () => alertDiv.remove());
     }, 5000); // 5 seconds
 }
+function everythingDoneAlert() {
+            // Create the alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <strong>Everything's Done!</strong> Your tasks have been successfully completed.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+            // Append the alert to the container
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.appendChild(alertDiv);
+
+            // Optional: Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                alertDiv.addEventListener('transitionend', () => alertDiv.remove());
+            }, 5000);
+        }
