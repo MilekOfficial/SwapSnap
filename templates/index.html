@@ -60,6 +60,7 @@
             getRandomPhoto(); // Trigger the function after a successful upload
         });
         this.on("error", function (file, errorMessage) {
+            showElement('#error');
         });
     }
 };

@@ -118,3 +118,21 @@ function react(emoji) {
             alert("An error occurred while submitting your reaction.");
         });
 }
+
+function showElement(selector) {
+    // Find the element by the provided selector
+    const element = document.querySelector(selector);
+    
+    if (element) {
+        // Make the element visible
+        element.style.display = 'block'; // or 'flex', 'grid', etc., depending on your layout
+        element.style.visibility = 'visible';
+        element.style.opacity = '1'; // Useful if using a fade-in effect
+    } else {
+        console.error(`Element not found with selector: ${selector}`);
+    }
+}
+
+// Example usage:
+// Assuming you have an element with the id "myElement" that is hidden
+
