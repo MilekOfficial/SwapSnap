@@ -23,23 +23,36 @@
     <title>SwapSnap - Photo Share</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <style>
-      #color-switch {
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* Default theme */
+    body {
+      background-color: white;
+      color: black;
+    }
+
+    /* Dark theme when toggle is checked */
+    #toggle:checked ~ body {
+      background-color: black;
+      color: white;
+    }
+
+    /* Position and style of the switch */
+    .color-switch {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      z-index: 1000;
       display: flex;
       align-items: center;
       gap: 10px;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 10px;
-      border-radius: 30px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
     }
-    .switch-label {
-      font-size: 14px;
-      font-weight: bold;
-    }
+
     .toggle {
       appearance: none;
       width: 50px;
@@ -49,8 +62,9 @@
       position: relative;
       cursor: pointer;
       outline: none;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s ease;
     }
+
     .toggle::before {
       content: '';
       width: 20px;
@@ -60,15 +74,27 @@
       position: absolute;
       top: 2.5px;
       left: 3px;
-      transition: transform 0.3s;
+      transition: transform 0.3s ease;
     }
-    .toggle:checked {
+
+    #toggle:checked + .toggle {
       background-color: black;
     }
-    .toggle:checked::before {
+
+    #toggle:checked + .toggle::before {
       transform: translateX(25px);
     }
-    </style>
+
+    .switch-label {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    /* Hide input checkbox */
+    #toggle {
+      display: none;
+    }
+  </style>
 </head>
 <body>
     <div class="container">
@@ -76,6 +102,11 @@
             <h1>SwapSnap</h1>
             <p class="subtitle">Replace photo with internet</p>
         </header>
+      <div class="color-switch">
+        <label for="toggle" class="switch-label">Theme:</label>
+        <input type="checkbox" id="toggle">
+          <div class="toggle"></div>
+        </div>
         <div id="alert-container" class="container mt-4"></div>
         <div class="upload-section card">
             <h2>Add your photo <i class="bi bi-plus"></i></h2>
