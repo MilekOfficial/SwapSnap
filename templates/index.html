@@ -22,6 +22,53 @@
     <meta name="description" content="Exchange your photo with intenet.">
     <title>SwapSnap - Photo Share</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+      #color-switch {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 30px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .switch-label {
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .toggle {
+      appearance: none;
+      width: 50px;
+      height: 25px;
+      background-color: #ccc;
+      border-radius: 50px;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      transition: background-color 0.3s;
+    }
+    .toggle::before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      background-color: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2.5px;
+      left: 3px;
+      transition: transform 0.3s;
+    }
+    .toggle:checked {
+      background-color: black;
+    }
+    .toggle:checked::before {
+      transform: translateX(25px);
+    }
+    </style>
 </head>
 <body>
     <div class="theme-toggle" id="themeToggle"></div>
@@ -71,5 +118,6 @@
     }
 };
   </script>
+  
 </body>
 </html>
