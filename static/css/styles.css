@@ -1,9 +1,9 @@
-
-    /* General Reset */
-    *,
+*,
     *::before,
     *::after {
         box-sizing: border-box;
+        margin: 0;
+        padding: 0;
         border: none !important;
     }
 
@@ -11,8 +11,6 @@
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         background-color: white;
         color: black;
-        margin: 0;
-        padding: 0;
         display: flex;
         flex-direction: column;
         min-height: 100vh;
@@ -47,7 +45,7 @@
         position: relative;
         cursor: pointer;
         outline: none;
-        transition: background-color 0.3s;
+        transition: background-color 0.3s ease;
     }
 
     .toggle::before {
@@ -59,7 +57,7 @@
         position: absolute;
         top: 2.5px;
         left: 3px;
-        transition: transform 0.3s;
+        transition: transform 0.3s ease;
     }
 
     .toggle:checked {
@@ -96,7 +94,7 @@
         margin-top: 10px;
     }
 
-    /* Container */
+    /* Main Container */
     .container {
         width: 100%;
         max-width: 1200px;
@@ -105,5 +103,61 @@
         background-color: #fff;
         border-radius: 6px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        border: none;
+    }
+
+    /* Buttons */
+    .button {
+        background-color: #2d9cdb;
+        color: #fff;
+        padding: 12px 20px;
+        font-size: 1em;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+        background-color: #2188c2;
+    }
+
+    /* Links */
+    a {
+        color: #0366d6;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    /* Media Query for Mobile */
+    @media (max-width: 768px) {
+        .container {
+            margin: 150px 10px 0;
+            padding: 15px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+        }
+
+        .header .subtitle {
+            font-size: 1em;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .container {
+            margin: 150px 5px 0;
+            padding: 10px;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+        }
+
+        .header .subtitle {
+            font-size: 0.9em;
+        }
     }
