@@ -77,10 +77,15 @@
 
   <script>
     function toggleTheme() {
-      const isDark = document.getElementById('toggle').checked;
-      document.body.style.backgroundColor = isDark ? 'black' : 'white';
-      document.body.style.color = isDark ? 'white' : 'black';
-      document.container.style.color = isDark ? 'white' : 'black';
+        const toggleElement = document.getElementById('toggle');
+        const isDarkMode = toggleElement.checked;
+        const bodyElement = document.body;
+        const containerElement = document.getElementById('container');
+
+        bodyElement.style.backgroundColor = isDarkMode ? '#000000' : '#FFFFFF';
+        bodyElement.style.color = isDarkMode ? '#FFFFFF' : '#000000';
+        containerElement.style.backgroundColor = isDarkMode ? '#000000' : '#FFFFFF';
+        containerElement.style.color = isDarkMode ? '#FFFFFF' : '#000000';
     }
   </script>
   
