@@ -7,9 +7,11 @@ from flask import Flask, jsonify, render_template, request, send_from_directory,
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
+
 load_dotenv()  # Load environment variables from .env file
 
-app = Flask("SwapSnap")  # Generate a secure secret key
+app = Flask("SwapSnap")
+app.secret_key = os.getenv('SECRET_KEY')  # Generate a secure secret key
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Store uploaded files in a separate directory
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
