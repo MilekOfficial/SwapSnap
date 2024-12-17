@@ -4,3 +4,4 @@ tinydb
 requests
 python-dotenv
 secrets
+pyOpenSSL
