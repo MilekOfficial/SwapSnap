@@ -6,12 +6,10 @@ from datetime import datetime
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from secrets import token_urlsafe
 
 load_dotenv()  # Load environment variables from .env file
 
-app = Flask("SwapSnap")
-app.secret_key = secrets.token_urlsafe(16)  # Generate a secure secret key
+app = Flask("SwapSnap")  # Generate a secure secret key
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Store uploaded files in a separate directory
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
