@@ -5,16 +5,14 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
-test = os.getenv('powi')
-print(test)
+load_dotenv()  # Load environment variables from .env file
 
-# Initialize Flask app
 app = Flask("SwapSnap")
-app.secret_key = 'Hey'  # Change to a secure secret key
+app.secret_key = secrets.token_urlsafe(16)  # Generate a secure secret key
 
-# Directory for uploaded files
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Store uploaded files in a separate directory
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # File to store reactions
