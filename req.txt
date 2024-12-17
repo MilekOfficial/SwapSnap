@@ -3,5 +3,5 @@ flask-minify
 tinydb
 requests
 python-dotenv
-pyOpenSSL
+pyopenssl
 secrets
