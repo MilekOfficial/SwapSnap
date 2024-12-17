@@ -3,3 +3,4 @@ flask-minify
 tinydb
 requests
 python-dotenv
+secrets
