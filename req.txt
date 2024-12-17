@@ -1,3 +1,4 @@
+--upgrade pip setuptools wheel
 flask
 flask-minify
 tinydb
