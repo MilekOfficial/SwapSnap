@@ -7,8 +7,8 @@
 }
 
 :root {
-    --bg-color: #ffffff;
-    --text-color: #000000;
+    --bg-color: #24292f;
+    --text-color: #ffffff;
     --card-bg: #ffffff;
     --card-border: #dee2e6;
     --button-bg: #f8f9fa;
@@ -17,11 +17,11 @@
     --header-bg: #24292f;
     --header-text: #ffffff;
     --header-subtitle: #b0b0b0;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+    --shadow-color: rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] {
-    --bg-color: #1a1a1a;
+    --bg-color: #161b22;
     --text-color: #ffffff;
     --card-bg: #2d2d2d;
     --card-border: #404040;
