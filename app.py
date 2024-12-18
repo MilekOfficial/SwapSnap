@@ -20,11 +20,17 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads to static folder
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Base URL for the application
-BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
-
 # File to store reactions (in the persistent storage)
 EMOJIS_FILE = os.path.join(UPLOAD_FOLDER, 'emojis.json')
+
+# Get base URL from environment or use default
+BASE_URL = os.getenv('BASE_URL', 'https://swapsnap.studyshare.pl')
+
+def get_full_url(path):
+    """Generate a full URL for a given path."""
+    if path.startswith('/'):
+        path = path[1:]
+    return f"{BASE_URL}/{path}"
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -34,10 +40,6 @@ MAX_SIZE = (1920, 1080)  # Maximum image size
 
 # Allowed emojis for reactions
 EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
-
-def get_full_url(path):
-    """Generate full URL for a given path"""
-    return urljoin(BASE_URL, path)
 
 def load_reactions():
     """Load reactions from the emojis.json file."""
@@ -133,7 +135,7 @@ def upload():
         reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
         save_reactions(reactions)
         
-        photo_url = url_for('static', filename=f'uploads/{filename}')
+        photo_url = get_full_url(f'static/uploads/{filename}')
         return jsonify({
             'success': True,
             'filename': filename,
@@ -163,8 +165,8 @@ def random_photo():
     chosen_photo = random.choice(available_photos)
     session['last_shown_photo'] = chosen_photo
     
-    # Use url_for to generate proper URL
-    photo_url = url_for('static', filename=f'uploads/{chosen_photo}')
+    # Generate full URL using the BASE_URL
+    photo_url = get_full_url(f'static/uploads/{chosen_photo}')
 
     reactions = load_reactions()
     current_reactions = reactions.get(chosen_photo, {'reactions': {}})
