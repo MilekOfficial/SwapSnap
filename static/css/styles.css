@@ -6,16 +6,36 @@
     border: none !important;
 }
 
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --card-bg: #ffffff;
+    --card-border: #dee2e6;
+    --button-bg: #f8f9fa;
+    --button-hover: #e9ecef;
+    --reaction-bg: #f8f9fa;
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1a1a;
+    --text-color: #ffffff;
+    --card-bg: #2d2d2d;
+    --card-border: #404040;
+    --button-bg: #404040;
+    --button-hover: #505050;
+    --reaction-bg: #404040;
+}
 
 body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background-color: white;
-    color: black; /* Light gray background */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    min-height: 100vh;
     margin: 0;
-    padding: 0;
+    padding: 20px 0;
     display: flex;
     flex-direction: column; /* Allow for stacked layout */
-    min-height: 100vh;
 }
 
 #color-switch {
@@ -30,12 +50,14 @@ body {
     padding: 10px;
     border-radius: 30px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-  .switch-label {
+}
+
+.switch-label {
     font-size: 14px;
     font-weight: bold;
-  }
-  .toggle {
+}
+
+.toggle {
     appearance: none;
     width: 50px;
     height: 25px;
@@ -45,8 +67,9 @@ body {
     cursor: pointer;
     outline: none;
     transition: background-color 0.3s;
-  }
-  .toggle::before {
+}
+
+.toggle::before {
     content: '';
     width: 20px;
     height: 20px;
@@ -56,13 +79,16 @@ body {
     top: 2.5px;
     left: 3px;
     transition: transform 0.3s;
-  }
-  .toggle:checked {
+}
+
+.toggle:checked {
     background-color: black;
-  }
-  .toggle:checked::before {
+}
+
+.toggle:checked::before {
     transform: translateX(25px);
-  }
+}
+
 /* Header */
 .header {
     width: 100%; /* Full width */
@@ -201,7 +227,6 @@ a:hover {
 .emoji:hover {
     transform: scale(1.3);
 }
-
 
 /* Media Query for Mobile Devices */
 @media (max-width: 768px) {

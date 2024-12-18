@@ -138,29 +138,23 @@ function triggerAlert(message, type = 'error') {
     }, 3000);
 }
 
-function toggleTheme() {
-    const toggleElement = document.getElementById('toggle');
-    const isDarkMode = toggleElement.checked;
-    const bodyElement = document.body;
-
-    if (isDarkMode) {
-        bodyElement.classList.add('dark-mode');
-    } else {
-        bodyElement.classList.remove('dark-mode');
-    }
-
-    localStorage.setItem('darkMode', isDarkMode);
+// Theme switching functionality
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
 }
 
-// Load a random photo when the page loads
+function toggleTheme() {
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.getElementById('toggle').checked = newTheme === 'dark';
+}
+
+// Initialize theme
 document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.getElementById('toggle').checked = savedTheme === 'dark';
     getRandomPhoto();
-    
-    // Initialize theme
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    const toggleElement = document.getElementById('toggle');
-    if (toggleElement) {
-        toggleElement.checked = isDarkMode;
-        toggleTheme();
-    }
 });
