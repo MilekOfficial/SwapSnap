@@ -1,39 +1,6 @@
 const reactionsDiv = document.getElementById('reactions');
 const randomPhotoDiv = document.getElementById('random-photo');
-const reactionSection = document.getElementById('reaction-section');
 let currentPhotoUrl = '';
-
-// Function to upload a photo
-function uploadPhoto() {
-    const fileInput = document.getElementById('file-upload');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert("Please add a photo.");
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    fetch("/upload", {
-        method: "POST",
-        body: formData,
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message === "File uploaded successfully!") {
-                alert(data.message);
-                getRandomPhoto(); // Fetch a new random photo after upload
-            } else {
-                alert(data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error uploading photo:', error);
-            alert("An error occurred during upload.");
-        });
-}
 
 // Function to fetch a random photo and its reactions
 function getRandomPhoto() {
@@ -43,28 +10,29 @@ function getRandomPhoto() {
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                alert(data.error);
+                triggerAlert(data.error);
                 return;
             }
 
             // Display the random photo
             currentPhotoUrl = data.photo_url;
-            randomPhotoDiv.innerHTML = `<img src="${currentPhotoUrl}" alt="Random Photo" />`;
+            randomPhotoDiv.innerHTML = `<img src="${currentPhotoUrl}" alt="Random Photo" class="img-fluid" />`;
 
             // Display reactions
             const reactions = data.reactions;
             displayReactions(reactions);
-
-            // Show the reaction section
-            reactionSection.style.display = 'block';
         })
+        .catch(error => {
+            console.error('Error fetching random photo:', error);
+            triggerAlert("An error occurred while fetching the photo.");
+        });
 }
 
 // Function to display reactions
 function displayReactions(reactions) {
     reactionsDiv.innerHTML = ''; // Clear previous reactions
 
-    if (reactions.length === 0) {
+    if (!reactions || reactions.length === 0) {
         reactionsDiv.innerHTML = '<p>No reactions yet.</p>';
         return;
     }
@@ -84,7 +52,7 @@ function displayReactions(reactions) {
 // Function to react to the current photo
 function react(emoji) {
     if (!currentPhotoUrl) {
-        alert('No photo to react to.');
+        triggerAlert('No photo to react to.');
         return;
     }
 
@@ -101,84 +69,62 @@ function react(emoji) {
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                alert(data.error);
+                triggerAlert(data.error);
                 return;
             }
-
-            // Update displayed reactions
-            const reactions = data.reactions;
-            displayReactions(reactions);
+            displayReactions(data.reactions);
+            triggerAlert('Reaction added!', 'success');
         })
         .catch(error => {
-            console.error('Error reacting to photo:', error);
-            alert("An error occurred while submitting your reaction.");
+            console.error('Error adding reaction:', error);
+            triggerAlert('An error occurred while adding your reaction.');
         });
 }
-function triggerAlert(message) {
-    // Create the alert div
+
+function triggerAlert(message, type = 'error') {
+    const alertContainer = document.getElementById('alert-container');
     const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-warning alert-dismissible fade show';
-    alertDiv.role = 'alert';
+    alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-
-    // Append the alert to the alert-container
-    const alertContainer = document.getElementById('alert-container');
     alertContainer.appendChild(alertDiv);
 
-    // Optional: Automatically remove the alert after a few seconds
+    // Auto-dismiss after 3 seconds
     setTimeout(() => {
-        alertDiv.classList.remove('show');
-        alertDiv.addEventListener('transitionend', () => alertDiv.remove());
-    }, 5000); // 5 seconds
+        alertDiv.remove();
+    }, 3000);
 }
+
 function everythingDoneAlert() {
-            // Create the alert element
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.role = 'alert';
-            alertDiv.innerHTML = `
-                <strong>File Uploded!</strong> Thank's for using SwapSnap.
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
+    triggerAlert('Photo uploaded successfully!', 'success');
+}
 
-            // Append the alert to the container
-            const alertContainer = document.getElementById('alert-container');
-            alertContainer.appendChild(alertDiv);
-
-            // Optional: Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                alertDiv.classList.remove('show');
-                alertDiv.addEventListener('transitionend', () => alertDiv.remove());
-            }, 5000);
-        }
-
-// script.js
-document.addEventListener("DOMContentLoaded", () => {
-  const themeToggle = document.getElementById("themeToggle");
-
-  // Sprawdzanie zapisanych preferencji w LocalStorage
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark-theme");
-  }
-
-  // Przełączanie trybu
-  themeToggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark-theme");
-
-    // Zapisywanie stanu w LocalStorage
-    if (document.body.classList.contains("dark-theme")) {
-      localStorage.setItem("theme", "dark");
-    } else {
-      localStorage.setItem("theme", "light");
+// Load a random photo when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    getRandomPhoto();
+    
+    // Initialize theme
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    const toggleElement = document.getElementById('toggle');
+    if (toggleElement) {
+        toggleElement.checked = isDarkMode;
+        toggleTheme();
     }
-  });
 });
 
-//gsafklgjhdskajhfakjshflhhhhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhllll4 r74eufdchyj 87rofucyehjd4 87fceoruydhjxani4sw  8oc7fyruhdeajx4wnq3i 8aeorqw347fyduhjcn
-//i need to be js project on github
-//ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]
-//ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]ofhjsdzp[a q34a8erwi7uhy]
+// Theme toggle function
+function toggleTheme() {
+    const toggleElement = document.getElementById('toggle');
+    const isDarkMode = toggleElement.checked;
+    const bodyElement = document.body;
+
+    if (isDarkMode) {
+        bodyElement.classList.add('dark-mode');
+    } else {
+        bodyElement.classList.remove('dark-mode');
+    }
+
+    localStorage.setItem('darkMode', isDarkMode);
+}

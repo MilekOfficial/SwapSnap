@@ -13,11 +13,11 @@ from PIL import Image
 
 load_dotenv()  # Load environment variables from .env file
 
-app = Flask("SwapSnap")
+app = Flask("SwapSnap", static_folder='static')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
 
-# Configure upload paths and URLs
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+# Configure upload paths
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads to static folder
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Base URL for the application
@@ -133,7 +133,7 @@ def upload():
         reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
         save_reactions(reactions)
         
-        photo_url = get_full_url(f'/uploads/{filename}')
+        photo_url = url_for('static', filename=f'uploads/{filename}')
         return jsonify({
             'success': True,
             'filename': filename,
@@ -162,7 +162,9 @@ def random_photo():
 
     chosen_photo = random.choice(available_photos)
     session['last_shown_photo'] = chosen_photo
-    photo_url = get_full_url(f'/uploads/{chosen_photo}')
+    
+    # Use url_for to generate proper URL
+    photo_url = url_for('static', filename=f'uploads/{chosen_photo}')
 
     reactions = load_reactions()
     current_reactions = reactions.get(chosen_photo, {'reactions': {}})
