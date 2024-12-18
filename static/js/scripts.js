@@ -142,13 +142,18 @@ function triggerAlert(message, type = 'error') {
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+    
+    // Update container background
+    const container = document.querySelector('.container');
+    if (container) {
+        container.style.backgroundColor = theme === 'dark' ? '#24292f' : '#ffffff';
+    }
 }
 
 function toggleTheme() {
     const currentTheme = localStorage.getItem('theme') || 'light';
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    document.getElementById('toggle').checked = newTheme === 'dark';
 }
 
 // Initialize theme
