@@ -17,7 +17,7 @@ services:
       sizeGB: 1
     autoDeploy: true  # Enable auto-deployment
     branch: main      # Branch to watch for changes
-    healthCheckPath: /  # Path to check if service is healthy
+    healthCheckPath: /health  # Path to check if service is healthy
     numInstances: 1   # Number of instances to run
     domains:
       - swapsnap.studyshare.pl

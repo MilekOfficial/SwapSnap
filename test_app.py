@@ -41,3 +41,13 @@ def test_url_generation(client):
         assert rv.status_code == 400  # Will fail due to invalid file
         response_data = rv.get_json()
         assert 'error' in response_data
+
+def test_health_check(client):
+    """Test health check endpoint"""
+    rv = client.get('/health')
+    assert rv.status_code == 200
+    data = rv.get_json()
+    assert data['status'] == 'healthy'
+    assert 'timestamp' in data
+    assert data['upload_folder'] == 'accessible'
+    assert data['reactions_file'] == 'accessible'

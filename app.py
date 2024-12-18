@@ -208,6 +208,27 @@ def react():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render."""
+    try:
+        # Check if we can access the upload directory
+        os.listdir(UPLOAD_FOLDER)
+        # Check if we can access the reactions file
+        load_reactions()
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'upload_folder': 'accessible',
+            'reactions_file': 'accessible'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 if __name__ == '__main__':
     # Use environment variables for host and port
     port = int(os.environ.get('PORT', 8000))
