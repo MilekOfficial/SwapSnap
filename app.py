@@ -13,13 +13,14 @@ from PIL import Image
 load_dotenv()  # Load environment variables from .env file
 
 app = Flask("SwapSnap")
-app.secret_key = os.getenv('SECRET_KEY')  # Generate a secure secret key
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Store uploaded files in a separate directory
+# Configure upload paths
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# File to store reactions
-EMOJIS_FILE = 'emojis.json'
+# File to store reactions (in the persistent storage)
+EMOJIS_FILE = os.path.join(UPLOAD_FOLDER, 'emojis.json')
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -191,4 +192,6 @@ def react():
         return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    # Use environment variables for host and port
+    port = int(os.environ.get('PORT', 8000))
+    app.run(debug=False, host='0.0.0.0', port=port)
