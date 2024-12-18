@@ -2,10 +2,12 @@ import json
 import os
 import random
 from datetime import datetime
+from io import BytesIO
 
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from PIL import Image
 
 
 load_dotenv()  # Load environment variables from .env file
@@ -22,10 +24,12 @@ EMOJIS_FILE = 'emojis.json'
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+# Image size limits
+MAX_SIZE = (1920, 1080)  # Maximum image size
+
 # Allowed emojis for reactions
 EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
 
-# Helper functions for managing reactions
 def load_reactions():
     """Load reactions from the emojis.json file."""
     try:
@@ -43,6 +47,43 @@ def allowed_file(filename):
     """Check if a file is allowed based on its extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def optimize_image(image_file):
+    """Optimize and resize image for web."""
+    try:
+        img = Image.open(image_file)
+        
+        # Convert to RGB if necessary
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        
+        # Auto-rotate image based on EXIF data
+        try:
+            img = Image.open(image_file)
+            if hasattr(img, '_getexif'):
+                exif = img._getexif()
+                if exif:
+                    orientation = exif.get(274)  # 274 is the orientation tag
+                    if orientation:
+                        rotate_values = {3: 180, 6: 270, 8: 90}
+                        if orientation in rotate_values:
+                            img = img.rotate(rotate_values[orientation], expand=True)
+        except:
+            pass  # If EXIF handling fails, continue with the original image
+        
+        # Resize if larger than MAX_SIZE
+        if img.size[0] > MAX_SIZE[0] or img.size[1] > MAX_SIZE[1]:
+            img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+        
+        # Save optimized image
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=85, optimize=True)
+        output.seek(0)
+        
+        return output
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        return None
+
 @app.route('/')
 def index():
     """Home page."""
@@ -53,21 +94,43 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    """Endpoint to upload a photo."""
+    """Upload and optimize a photo."""
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-
+    
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-
+    
     if file and allowed_file(file.filename):
-        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+        # Generate a unique filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        original_filename = secure_filename(file.filename)
+        base_filename = os.path.splitext(original_filename)[0]
+        filename = f"{timestamp}_{base_filename}.jpg"
+        
+        # Process and optimize image
+        optimized_image = optimize_image(file)
+        if not optimized_image:
+            return jsonify({'error': 'Error processing image'}), 400
+        
+        # Save optimized image
         filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
-        return jsonify({'message': 'File uploaded successfully!', 'photo_url': f'/uploads/{filename}'}), 200
-    else:
-        return jsonify({'error': 'Invalid file type'}), 400
+        with open(filepath, 'wb') as f:
+            f.write(optimized_image.getvalue())
+        
+        # Initialize reactions for the new photo
+        reactions = load_reactions()
+        reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
+        save_reactions(reactions)
+        
+        return jsonify({
+            'success': True,
+            'filename': filename,
+            'photo_url': f'/uploads/{filename}'
+        })
+    
+    return jsonify({'error': 'File type not allowed'}), 400
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -91,8 +154,8 @@ def random_photo():
     session['last_shown_photo'] = random_photo_url
 
     reactions = load_reactions()
-    current_reactions = reactions.get(random_photo_url, {})
-    formatted_reactions = [{'user_id': user, 'emoji': emoji} for user, emoji in current_reactions.items()]
+    current_reactions = reactions.get(random_photo_url.split('/')[-1], {})
+    formatted_reactions = [{'user_id': user, 'emoji': emoji} for user, emoji in current_reactions.get('reactions', {}).items()]
 
     return jsonify({'photo_url': random_photo_url, 'reactions': formatted_reactions}), 200
 
@@ -116,12 +179,12 @@ def react():
 
         if photo_url not in reactions:
             reactions[photo_url] = {}
-        reactions[photo_url][user_id] = emoji
+        reactions[photo_url]['reactions'][emoji].append(user_id)
 
         save_reactions(reactions)
 
-        current_reactions = reactions[photo_url]
-        formatted_reactions = [{'user_id': uid, 'emoji': e} for uid, e in current_reactions.items()]
+        current_reactions = reactions[photo_url]['reactions']
+        formatted_reactions = [{'user_id': user, 'emoji': emoji} for emoji, users in current_reactions.items() for user in users]
         return jsonify({'message': 'Reaction added successfully!', 'reactions': formatted_reactions}), 200
 
     except Exception as e:
@@ -129,4 +192,3 @@ def react():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
-# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions# File to store reactions
