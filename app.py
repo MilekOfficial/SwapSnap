@@ -24,7 +24,7 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads t
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # File to store reactions (in the persistent storage)
-EMOJIS_FILE = os.path.join(UPLOAD_FOLDER, 'emojis.json')
+REACTIONS_FILE = os.path.join(UPLOAD_FOLDER, 'reactions.json')
 
 # Get base URL from environment or use default
 BASE_URL = os.getenv('BASE_URL', 'https://swapsnap.studyshare.pl')
@@ -45,17 +45,23 @@ MAX_SIZE = (1920, 1080)  # Maximum image size
 EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
 
 def load_reactions():
-    """Load reactions from the emojis.json file."""
+    """Load reactions from the reactions.json file."""
     try:
-        with open(EMOJIS_FILE, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
+        if os.path.exists(REACTIONS_FILE):
+            with open(REACTIONS_FILE, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading reactions: {str(e)}")
         return {}
 
 def save_reactions(reactions):
-    """Save reactions to the emojis.json file."""
-    with open(EMOJIS_FILE, 'w') as f:
-        json.dump(reactions, f)
+    """Save reactions to the reactions.json file."""
+    try:
+        with open(REACTIONS_FILE, 'w') as f:
+            json.dump(reactions, f)
+    except Exception as e:
+        logger.error(f"Error saving reactions: {str(e)}")
 
 def allowed_file(filename):
     """Check if file extension is allowed."""
@@ -131,7 +137,7 @@ def upload_file():
 
             # Initialize reactions for this image
             reactions = load_reactions()
-            reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
+            reactions[filename] = {'reactions': {}}
             save_reactions(reactions)
             
             photo_url = get_full_url(f'static/uploads/{filename}')
@@ -189,35 +195,61 @@ def random_photo():
     }), 200
 
 @app.route('/react', methods=['POST'])
-def react():
-    """Endpoint to react to a photo."""
+def add_reaction():
+    """Add a reaction to a photo."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
         photo_url = data.get('photo_url')
         emoji = data.get('emoji')
 
         if not photo_url or not emoji:
-            return jsonify({'error': 'Both photo_url and emoji are required'}), 400
+            return jsonify({'error': 'Missing photo_url or emoji'}), 400
 
-        if emoji not in EMOJI_REACTIONS:
-            return jsonify({'error': f'Invalid emoji. Valid emojis are: {", ".join(EMOJI_REACTIONS)}'}), 400
+        # Extract filename from photo_url
+        filename = photo_url.split('/')[-1]
 
+        # Load current reactions
         reactions = load_reactions()
-        user_id = session.get('user_id', str(datetime.now().timestamp()))
-        session['user_id'] = user_id
+        
+        # Initialize reactions for this photo if it doesn't exist
+        if filename not in reactions:
+            reactions[filename] = {'reactions': {}}
+        
+        # Initialize emoji array if it doesn't exist
+        if 'reactions' not in reactions[filename]:
+            reactions[filename]['reactions'] = {}
+            
+        if emoji not in reactions[filename]['reactions']:
+            reactions[filename]['reactions'][emoji] = []
 
-        if photo_url not in reactions:
-            reactions[photo_url] = {}
-        reactions[photo_url]['reactions'][emoji].append(user_id)
+        # Generate a simple user ID based on session
+        if 'user_id' not in session:
+            session['user_id'] = f"user_{random.randint(1000, 9999)}"
+        user_id = session['user_id']
 
-        save_reactions(reactions)
+        # Add reaction if not already added by this user
+        if user_id not in reactions[filename]['reactions'][emoji]:
+            reactions[filename]['reactions'][emoji].append(user_id)
+            save_reactions(reactions)
 
-        current_reactions = reactions[photo_url]['reactions']
-        formatted_reactions = [{'user_id': user, 'emoji': emoji} for emoji, users in current_reactions.items() for user in users]
-        return jsonify({'message': 'Reaction added successfully!', 'reactions': formatted_reactions}), 200
+        # Format reactions for response
+        formatted_reactions = [
+            {'emoji': e, 'user_id': uid}
+            for e, users in reactions[filename]['reactions'].items()
+            for uid in users
+        ]
+
+        return jsonify({
+            'success': True,
+            'reactions': formatted_reactions
+        }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        logger.error(f"Error adding reaction: {str(e)}")
+        return jsonify({'error': 'Error adding reaction'}), 500
 
 @app.route('/health')
 def health_check():
