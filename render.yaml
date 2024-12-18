@@ -9,6 +9,8 @@ services:
         value: 3.9.0
       - key: SECRET_KEY
         generateValue: true
+      - key: BASE_URL
+        value: https://swapsnap.studyshare.pl
     disk:
       name: uploads
       mountPath: /opt/render/project/src/uploads
@@ -17,3 +19,5 @@ services:
     branch: main      # Branch to watch for changes
     healthCheckPath: /  # Path to check if service is healthy
     numInstances: 1   # Number of instances to run
+    domains:
+      - swapsnap.studyshare.pl

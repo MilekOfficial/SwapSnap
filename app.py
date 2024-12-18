@@ -3,8 +3,9 @@ import os
 import random
 from datetime import datetime
 from io import BytesIO
+from urllib.parse import urljoin
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, session
+from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from PIL import Image
@@ -15,9 +16,12 @@ load_dotenv()  # Load environment variables from .env file
 app = Flask("SwapSnap")
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
 
-# Configure upload paths
+# Configure upload paths and URLs
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Base URL for the application
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
 
 # File to store reactions (in the persistent storage)
 EMOJIS_FILE = os.path.join(UPLOAD_FOLDER, 'emojis.json')
@@ -30,6 +34,10 @@ MAX_SIZE = (1920, 1080)  # Maximum image size
 
 # Allowed emojis for reactions
 EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
+
+def get_full_url(path):
+    """Generate full URL for a given path"""
+    return urljoin(BASE_URL, path)
 
 def load_reactions():
     """Load reactions from the emojis.json file."""
@@ -125,10 +133,11 @@ def upload():
         reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
         save_reactions(reactions)
         
+        photo_url = get_full_url(f'/uploads/{filename}')
         return jsonify({
             'success': True,
             'filename': filename,
-            'photo_url': f'/uploads/{filename}'
+            'photo_url': photo_url
         })
     
     return jsonify({'error': 'File type not allowed'}), 400
@@ -141,24 +150,32 @@ def uploaded_file(filename):
 @app.route('/random_photo', methods=['GET'])
 def random_photo():
     """Endpoint to get a random photo."""
-    all_photos = [f'/uploads/{f}' for f in os.listdir(UPLOAD_FOLDER) if allowed_file(f)]
-    if not all_photos:
+    photos = [f for f in os.listdir(UPLOAD_FOLDER) if allowed_file(f)]
+    if not photos:
         return jsonify({'error': 'No photos available'}), 400
 
-    last_shown_photo = session.get('last_shown_photo', None)
-    available_photos = [photo for photo in all_photos if photo != last_shown_photo]
+    last_shown_photo = session.get('last_shown_photo')
+    available_photos = [p for p in photos if p != last_shown_photo]
 
     if not available_photos:
-        return jsonify({'error': 'No new photos available'}), 400
+        available_photos = photos  # If all photos shown, reset
 
-    random_photo_url = random.choice(available_photos)
-    session['last_shown_photo'] = random_photo_url
+    chosen_photo = random.choice(available_photos)
+    session['last_shown_photo'] = chosen_photo
+    photo_url = get_full_url(f'/uploads/{chosen_photo}')
 
     reactions = load_reactions()
-    current_reactions = reactions.get(random_photo_url.split('/')[-1], {})
-    formatted_reactions = [{'user_id': user, 'emoji': emoji} for user, emoji in current_reactions.get('reactions', {}).items()]
+    current_reactions = reactions.get(chosen_photo, {'reactions': {}})
+    formatted_reactions = [
+        {'user_id': user, 'emoji': emoji}
+        for emoji, users in current_reactions.get('reactions', {}).items()
+        for user in users
+    ]
 
-    return jsonify({'photo_url': random_photo_url, 'reactions': formatted_reactions}), 200
+    return jsonify({
+        'photo_url': photo_url,
+        'reactions': formatted_reactions
+    }), 200
 
 @app.route('/react', methods=['POST'])
 def react():
