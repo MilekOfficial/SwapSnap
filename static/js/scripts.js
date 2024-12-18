@@ -4,6 +4,8 @@ let currentPhotoUrl = '';
 
 // Function to fetch a random photo and its reactions
 function getRandomPhoto() {
+    randomPhotoDiv.innerHTML = '<div class="loading">Loading...</div>';
+    
     fetch('/random_photo', {
         method: 'GET',
     })
@@ -11,12 +13,24 @@ function getRandomPhoto() {
         .then(data => {
             if (data.error) {
                 triggerAlert(data.error);
+                randomPhotoDiv.innerHTML = '<div class="error">No photos available</div>';
                 return;
             }
 
             // Display the random photo
             currentPhotoUrl = data.photo_url;
-            randomPhotoDiv.innerHTML = `<img src="${currentPhotoUrl}" alt="Random Photo" class="img-fluid" />`;
+            const img = new Image();
+            img.onload = function() {
+                randomPhotoDiv.innerHTML = '';
+                randomPhotoDiv.appendChild(img);
+                img.classList.add('img-fluid');
+            };
+            img.onerror = function() {
+                randomPhotoDiv.innerHTML = '<div class="error">Error loading image</div>';
+                triggerAlert("Error loading image");
+            };
+            img.src = currentPhotoUrl;
+            img.alt = "Random Photo";
 
             // Display reactions
             const reactions = data.reactions;
@@ -24,6 +38,7 @@ function getRandomPhoto() {
         })
         .catch(error => {
             console.error('Error fetching random photo:', error);
+            randomPhotoDiv.innerHTML = '<div class="error">Error loading photo</div>';
             triggerAlert("An error occurred while fetching the photo.");
         });
 }
@@ -81,6 +96,32 @@ function react(emoji) {
         });
 }
 
+// Configure Dropzone
+Dropzone.options.fileDropzone = {
+    maxFilesize: 5, // Maximum file size in MB
+    acceptedFiles: 'image/*',
+    init: function() {
+        this.on("success", function(file, response) {
+            if (response.success) {
+                getRandomPhoto();
+                triggerAlert("Photo uploaded successfully!", "success");
+            } else {
+                triggerAlert(response.error || "Error uploading photo");
+            }
+        });
+        this.on("error", function(file, errorMessage) {
+            triggerAlert(typeof errorMessage === 'string' ? errorMessage : "Error uploading photo");
+            this.removeFile(file);
+        });
+        this.on("addedfile", function(file) {
+            if (file.size > 5 * 1024 * 1024) {
+                triggerAlert("File is too large (max 5MB)");
+                this.removeFile(file);
+            }
+        });
+    }
+};
+
 function triggerAlert(message, type = 'error') {
     const alertContainer = document.getElementById('alert-container');
     const alertDiv = document.createElement('div');
@@ -97,8 +138,18 @@ function triggerAlert(message, type = 'error') {
     }, 3000);
 }
 
-function everythingDoneAlert() {
-    triggerAlert('Photo uploaded successfully!', 'success');
+function toggleTheme() {
+    const toggleElement = document.getElementById('toggle');
+    const isDarkMode = toggleElement.checked;
+    const bodyElement = document.body;
+
+    if (isDarkMode) {
+        bodyElement.classList.add('dark-mode');
+    } else {
+        bodyElement.classList.remove('dark-mode');
+    }
+
+    localStorage.setItem('darkMode', isDarkMode);
 }
 
 // Load a random photo when the page loads
@@ -113,18 +164,3 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleTheme();
     }
 });
-
-// Theme toggle function
-function toggleTheme() {
-    const toggleElement = document.getElementById('toggle');
-    const isDarkMode = toggleElement.checked;
-    const bodyElement = document.body;
-
-    if (isDarkMode) {
-        bodyElement.classList.add('dark-mode');
-    } else {
-        bodyElement.classList.remove('dark-mode');
-    }
-
-    localStorage.setItem('darkMode', isDarkMode);
-}

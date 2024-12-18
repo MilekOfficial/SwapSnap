@@ -3,13 +3,16 @@ import os
 import random
 from datetime import datetime
 from io import BytesIO
-from urllib.parse import urljoin
+import logging
 
 from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -55,45 +58,39 @@ def save_reactions(reactions):
         json.dump(reactions, f)
 
 def allowed_file(filename):
-    """Check if a file is allowed based on its extension."""
+    """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def optimize_image(image_file):
-    """Optimize and resize image for web."""
+def process_image(image_file):
+    """Process and optimize the uploaded image."""
     try:
+        # Open the image
         img = Image.open(image_file)
         
-        # Convert to RGB if necessary
-        if img.mode in ('RGBA', 'P'):
+        # Convert RGBA to RGB if necessary
+        if img.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != 'RGB':
             img = img.convert('RGB')
-        
-        # Auto-rotate image based on EXIF data
-        try:
-            img = Image.open(image_file)
-            if hasattr(img, '_getexif'):
-                exif = img._getexif()
-                if exif:
-                    orientation = exif.get(274)  # 274 is the orientation tag
-                    if orientation:
-                        rotate_values = {3: 180, 6: 270, 8: 90}
-                        if orientation in rotate_values:
-                            img = img.rotate(rotate_values[orientation], expand=True)
-        except:
-            pass  # If EXIF handling fails, continue with the original image
-        
-        # Resize if larger than MAX_SIZE
-        if img.size[0] > MAX_SIZE[0] or img.size[1] > MAX_SIZE[1]:
-            img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
-        
-        # Save optimized image
+
+        # Resize if too large (maintaining aspect ratio)
+        max_size = (1920, 1080)
+        if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # Save to BytesIO
         output = BytesIO()
         img.save(output, format='JPEG', quality=85, optimize=True)
         output.seek(0)
-        
         return output
+    except UnidentifiedImageError as e:
+        logger.error(f"Error processing image: {str(e)}")
+        raise ValueError("Invalid image file")
     except Exception as e:
-        print(f"Error processing image: {e}")
-        return None
+        logger.error(f"Unexpected error processing image: {str(e)}")
+        raise ValueError("Error processing image")
 
 @app.route('/')
 def index():
@@ -104,45 +101,55 @@ def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
-def upload():
-    """Upload and optimize a photo."""
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    
-    if file and allowed_file(file.filename):
-        # Generate a unique filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        original_filename = secure_filename(file.filename)
-        base_filename = os.path.splitext(original_filename)[0]
-        filename = f"{timestamp}_{base_filename}.jpg"
+def upload_file():
+    """Handle file upload."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
         
-        # Process and optimize image
-        optimized_image = optimize_image(file)
-        if not optimized_image:
-            return jsonify({'error': 'Error processing image'}), 400
-        
-        # Save optimized image
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        with open(filepath, 'wb') as f:
-            f.write(optimized_image.getvalue())
-        
-        # Initialize reactions for the new photo
-        reactions = load_reactions()
-        reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
-        save_reactions(reactions)
-        
-        photo_url = get_full_url(f'static/uploads/{filename}')
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'photo_url': photo_url
-        })
-    
-    return jsonify({'error': 'File type not allowed'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
+
+        try:
+            # Process the image
+            processed_image = process_image(file)
+            
+            # Generate secure filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            original_filename = secure_filename(file.filename)
+            base_filename = os.path.splitext(original_filename)[0]
+            filename = f"{timestamp}_{base_filename}.jpg"
+            
+            # Save the processed image
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            with open(filepath, 'wb') as f:
+                f.write(processed_image.getvalue())
+
+            # Initialize reactions for this image
+            reactions = load_reactions()
+            reactions[filename] = {'reactions': {emoji: [] for emoji in EMOJI_REACTIONS}}
+            save_reactions(reactions)
+            
+            photo_url = get_full_url(f'static/uploads/{filename}')
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'photo_url': photo_url
+            }), 200
+
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}")
+            return jsonify({'error': 'Error saving file'}), 500
+
+    except Exception as e:
+        logger.error(f"Unexpected error in upload: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
