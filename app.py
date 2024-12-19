@@ -9,12 +9,30 @@ from flask import Flask, jsonify, render_template, request, send_from_directory,
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from PIL import Image, UnidentifiedImageError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
+
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/swapsnap')
+
+# SQLAlchemy setup
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Create database connection
+def get_db():
+    db = SessionLocal()
+    try:
+        return db
+    finally:
+        db.close()
 
 app = Flask("SwapSnap", static_folder='static')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
@@ -250,6 +268,11 @@ def add_reaction():
     except Exception as e:
         logger.error(f"Error adding reaction: {str(e)}")
         return jsonify({'error': 'Error adding reaction'}), 500
+
+@app.route('/auth')
+def auth():
+    """Render the authentication page."""
+    return render_template('auth.html')
 
 @app.route('/health')
 def health_check():
