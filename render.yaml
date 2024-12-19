@@ -9,6 +9,8 @@ services:
         value: 3.9.0
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        sync: false  # Indicates this is a secret value
       - key: BASE_URL
         value: https://swapsnap.studyshare.pl
     disk:

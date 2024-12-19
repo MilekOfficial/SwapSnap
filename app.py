@@ -20,10 +20,17 @@ logger = logging.getLogger(__name__)
 load_dotenv()  # Load environment variables from .env file
 
 # Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/swapsnap')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://swapsnap%20prod_owner:************@ep-ancient-snow-a2ahdj16.eu-central-1.aws.neon.tech/swapsnap%20prod?sslmode=require')
 
 # SQLAlchemy setup
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,  # Set to False in production
+    pool_size=5,
+    max_overflow=2,
+    pool_timeout=30,
+    pool_recycle=1800
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -400,6 +407,9 @@ def health_check():
         }), 500
 
 if __name__ == '__main__':
+    # Create database tables
+    Base.metadata.create_all(engine)
+    
     # Use environment variables for host and port
     port = int(os.environ.get('PORT', 8000))
     app.run(debug=False, host='0.0.0.0', port=port)
