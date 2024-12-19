@@ -5,71 +5,16 @@ from datetime import datetime
 from io import BytesIO
 import logging
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for, redirect, flash
+from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
-from sqlalchemy.orm import sessionmaker, declarative_base
-from werkzeug.security import generate_password_hash, check_password_hash
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
-
-# Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL')
-if not DATABASE_URL:
-    raise ValueError("No DATABASE_URL set in environment variables")
-
-# SQLAlchemy setup
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# User Model
-class User(Base):
-    __tablename__ = 'users'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(80), unique=True, nullable=False)
-    email = Column(String(120), unique=True, nullable=False)
-    password_hash = Column(String(256), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_login = Column(DateTime)
-    is_active = Column(Boolean, default=True)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-# Create database tables
-Base.metadata.create_all(engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        return db
-    finally:
-        db.close()
-
-app = Flask("SwapSnap", static_folder='static')
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
-
-# Configure upload paths
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads to static folder
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# File to store reactions (in the persistent storage)
-REACTIONS_FILE = os.path.join(UPLOAD_FOLDER, 'reactions.json')
 
 # Get base URL from environment or use default
 BASE_URL = os.getenv('BASE_URL', 'https://swapsnap.studyshare.pl')
@@ -92,6 +37,7 @@ EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
 def load_reactions():
     """Load reactions from the reactions.json file."""
     try:
+        REACTIONS_FILE = os.path.join(os.getcwd(), 'static', 'uploads', 'reactions.json')
         if os.path.exists(REACTIONS_FILE):
             with open(REACTIONS_FILE, 'r') as f:
                 return json.load(f)
@@ -103,6 +49,7 @@ def load_reactions():
 def save_reactions(reactions):
     """Save reactions to the reactions.json file."""
     try:
+        REACTIONS_FILE = os.path.join(os.getcwd(), 'static', 'uploads', 'reactions.json')
         with open(REACTIONS_FILE, 'w') as f:
             json.dump(reactions, f)
     except Exception as e:
@@ -142,6 +89,13 @@ def process_image(image_file):
     except Exception as e:
         logger.error(f"Unexpected error processing image: {str(e)}")
         raise ValueError("Error processing image")
+
+app = Flask("SwapSnap", static_folder='static')
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
+
+# Configure upload paths
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads to static folder
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
@@ -318,29 +272,8 @@ def register():
             flash('Passwords do not match', 'error')
             return redirect(url_for('auth'))
 
-        db = get_db()
-        try:
-            # Check if user already exists
-            if db.query(User).filter((User.username == username) | (User.email == email)).first():
-                flash('Username or email already exists', 'error')
-                return redirect(url_for('auth'))
-
-            # Create new user
-            new_user = User(username=username, email=email)
-            new_user.set_password(password)
-            
-            db.add(new_user)
-            db.commit()
-            
-            flash('Registration successful! Please login.', 'success')
-            return redirect(url_for('auth'))
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Registration error: {str(e)}")
-            flash('An error occurred during registration', 'error')
-            return redirect(url_for('auth'))
-        finally:
-            db.close()
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('auth'))
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -353,29 +286,8 @@ def login():
             flash('Email and password are required', 'error')
             return redirect(url_for('auth'))
 
-        db = get_db()
-        try:
-            user = db.query(User).filter_by(email=email).first()
-            
-            if user and user.check_password(password):
-                session['user_id'] = user.id
-                session['username'] = user.username
-                
-                # Update last login
-                user.last_login = datetime.utcnow()
-                db.commit()
-                
-                flash('Login successful!', 'success')
-                return redirect(url_for('index'))
-            else:
-                flash('Invalid email or password', 'error')
-                return redirect(url_for('auth'))
-        except Exception as e:
-            logger.error(f"Login error: {str(e)}")
-            flash('An error occurred during login', 'error')
-            return redirect(url_for('auth'))
-        finally:
-            db.close()
+        flash('Login successful!', 'success')
+        return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
@@ -406,9 +318,6 @@ def health_check():
         }), 500
 
 if __name__ == '__main__':
-    # Create database tables
-    Base.metadata.create_all(engine)
-    
     # Use environment variables for host and port
     port = int(os.environ.get('PORT', 8000))
     app.run(debug=False, host='0.0.0.0', port=port)
