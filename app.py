@@ -5,12 +5,13 @@ from datetime import datetime
 from io import BytesIO
 import logging
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for
+from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for, redirect, flash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +27,27 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Create database connection
+# User Model
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String(80), unique=True, nullable=False)
+    email = Column(String(120), unique=True, nullable=False)
+    password_hash = Column(String(256), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime)
+    is_active = Column(Boolean, default=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+# Create database tables
+Base.metadata.create_all(engine)
+
 def get_db():
     db = SessionLocal()
     try:
@@ -273,6 +294,89 @@ def add_reaction():
 def auth():
     """Render the authentication page."""
     return render_template('auth.html')
+
+@app.route('/register', methods=['POST'])
+def register():
+    """Handle user registration."""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not all([username, email, password, confirm_password]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('auth'))
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return redirect(url_for('auth'))
+
+        db = get_db()
+        try:
+            # Check if user already exists
+            if db.query(User).filter((User.username == username) | (User.email == email)).first():
+                flash('Username or email already exists', 'error')
+                return redirect(url_for('auth'))
+
+            # Create new user
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)
+            
+            db.add(new_user)
+            db.commit()
+            
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('auth'))
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Registration error: {str(e)}")
+            flash('An error occurred during registration', 'error')
+            return redirect(url_for('auth'))
+        finally:
+            db.close()
+
+@app.route('/login', methods=['POST'])
+def login():
+    """Handle user login."""
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        if not all([email, password]):
+            flash('Email and password are required', 'error')
+            return redirect(url_for('auth'))
+
+        db = get_db()
+        try:
+            user = db.query(User).filter_by(email=email).first()
+            
+            if user and user.check_password(password):
+                session['user_id'] = user.id
+                session['username'] = user.username
+                
+                # Update last login
+                user.last_login = datetime.utcnow()
+                db.commit()
+                
+                flash('Login successful!', 'success')
+                return redirect(url_for('index'))
+            else:
+                flash('Invalid email or password', 'error')
+                return redirect(url_for('auth'))
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            flash('An error occurred during login', 'error')
+            return redirect(url_for('auth'))
+        finally:
+            db.close()
+
+@app.route('/logout')
+def logout():
+    """Handle user logout."""
+    session.clear()
+    flash('You have been logged out', 'info')
+    return redirect(url_for('auth'))
 
 @app.route('/health')
 def health_check():
