@@ -10,16 +10,16 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false  # Indicates this is a secret value
+        sync: false  # This indicates it's a secret that needs to be set manually
       - key: BASE_URL
         value: https://swapsnap.studyshare.pl
     disk:
       name: uploads
       mountPath: /opt/render/project/src/static/uploads
       sizeGB: 1
-    autoDeploy: true  # Enable auto-deployment
-    branch: main      # Branch to watch for changes
-    healthCheckPath: /health  # Path to check if service is healthy
-    numInstances: 1   # Number of instances to run
+    autoDeploy: true
+    branch: main
+    healthCheckPath: /health
+    numInstances: 1
     domains:
       - swapsnap.studyshare.pl
