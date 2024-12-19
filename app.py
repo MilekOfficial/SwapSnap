@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()  # Load environment variables from .env file
 
 # Database configuration
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://swapsnap%20prod_owner:************@ep-ancient-snow-a2ahdj16.eu-central-1.aws.neon.tech/swapsnap%20prod?sslmode=require')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://swapsnap_prod_owner:your_password@ep-ancient-snow-a2ahdj16.eu-central-1.aws.neon.tech/swapsnap_prod?sslmode=require')
 
 # SQLAlchemy setup
 engine = create_engine(
@@ -29,7 +29,8 @@ engine = create_engine(
     pool_size=5,
     max_overflow=2,
     pool_timeout=30,
-    pool_recycle=1800
+    pool_recycle=1800,
+    connect_args={"application_name": "swapsnap"}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
