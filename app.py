@@ -28,7 +28,7 @@ load_dotenv()
 app = Flask("SwapSnap", static_folder='static')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 
 # Initialize Flask extensions
 Minify(app=app, html=True, js=True, cssless=True)

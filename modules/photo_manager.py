@@ -21,7 +21,9 @@ def get_all_photos():
             f for f in os.listdir(upload_folder)
             if '.' in f and f.rsplit('.', 1)[1].lower() in allowed_extensions
         ]
-        return photos
+        return sorted(photos, key=lambda x: os.path.getctime(
+            os.path.join(upload_folder, x)
+        ), reverse=True)
     except Exception as e:
         logger.error(f"Error getting photos: {str(e)}")
         return []
@@ -36,7 +38,9 @@ def get_photos():
                 'filename': photo,
                 'url': f'/uploads/{photo}',
                 'timestamp': datetime.fromtimestamp(
-                    os.path.getctime(os.path.join(current_app.config['UPLOAD_FOLDER'], photo))
+                    os.path.getctime(
+                        os.path.join(current_app.config['UPLOAD_FOLDER'], photo)
+                    )
                 ).isoformat()
             }
             for photo in photos
@@ -77,7 +81,9 @@ def random_photo():
         photo_data = {
             'filename': chosen_photo,
             'url': f'/uploads/{chosen_photo}',
-            'timestamp': datetime.fromtimestamp(os.path.getctime(photo_path)).isoformat()
+            'timestamp': datetime.fromtimestamp(
+                os.path.getctime(photo_path)
+            ).isoformat()
         }
 
         return jsonify({

@@ -1,9 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from PIL import Image, UnidentifiedImageError
 import os
 import logging
 from io import BytesIO
+from datetime import datetime
 
 image_bp = Blueprint('image', __name__)
 logger = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ def process_image(image_file):
             background = Image.new('RGB', img.size, (255, 255, 255))
             background.paste(img, mask=img.split()[3])
             img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
         
         # Resize if needed while maintaining aspect ratio
         if img.width > MAX_WIDTH or img.height > MAX_HEIGHT:
@@ -34,43 +37,60 @@ def process_image(image_file):
         
         # Save with optimization
         output = BytesIO()
-        img.save(output, format=img.format, optimize=True, quality=85)
+        img.save(output, format='JPEG', optimize=True, quality=85)
         output.seek(0)
         return output
         
     except UnidentifiedImageError as e:
         logger.error(f"Error processing image: {str(e)}")
         return None
+    except Exception as e:
+        logger.error(f"Unexpected error processing image: {str(e)}")
+        return None
 
 @image_bp.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-        
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'File type not allowed'}), 400
-        
-    if file.content_length and file.content_length > MAX_FILE_SIZE:
-        return jsonify({'error': 'File too large'}), 400
-        
     try:
-        filename = secure_filename(file.filename)
-        processed_image = process_image(file)
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
         
-        if processed_image is None:
-            return jsonify({'error': 'Error processing image'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
             
-        # Save the processed image
-        upload_path = os.path.join('uploads', filename)
-        with open(upload_path, 'wb') as f:
-            f.write(processed_image.getvalue())
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'File type not allowed'}), 400
             
-        return jsonify({'success': True, 'filename': filename}), 200
-        
+        if file.content_length and file.content_length > MAX_FILE_SIZE:
+            return jsonify({'error': 'File too large'}), 400
+            
+        try:
+            # Process the image
+            processed_image = process_image(file)
+            if processed_image is None:
+                return jsonify({'error': 'Error processing image'}), 400
+            
+            # Generate unique filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            original_filename = secure_filename(file.filename)
+            base_filename = os.path.splitext(original_filename)[0]
+            filename = f"{timestamp}_{base_filename}.jpg"
+            
+            # Save the processed image
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            with open(filepath, 'wb') as f:
+                f.write(processed_image.getvalue())
+                
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'url': f'/uploads/{filename}'
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}")
+            return jsonify({'error': 'Error saving file'}), 500
+            
     except Exception as e:
-        logger.error(f"Error in upload_file: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(f"Unexpected error in upload: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred'}), 500
