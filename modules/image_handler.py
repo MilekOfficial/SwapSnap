@@ -8,17 +8,28 @@ from datetime import datetime
 import requests
 import base64
 import json
+import humanize
 
 image_bp = Blueprint('image', __name__)
 logger = logging.getLogger(__name__)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 MAX_WIDTH = 1920
 MAX_HEIGHT = 1080
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_image_details(img, file_size):
+    """Get image details including dimensions, size, and format."""
+    return {
+        'width': img.width,
+        'height': img.height,
+        'format': img.format.lower() if img.format else 'unknown',
+        'size': humanize.naturalsize(file_size),
+        'aspect_ratio': f"{img.width}:{img.height}"
+    }
 
 def upload_to_imgbb(image_data):
     """Upload image to imgbb and return the URL."""
@@ -46,7 +57,10 @@ def upload_to_imgbb(image_data):
             return {
                 'url': data['data']['url'],
                 'delete_url': data['data']['delete_url'],
-                'thumbnail': data['data']['thumb']['url']
+                'thumbnail': data['data']['thumb']['url'],
+                'size': data['data']['size'],
+                'width': data['data']['width'],
+                'height': data['data']['height']
             }
         return None
 
@@ -56,7 +70,16 @@ def upload_to_imgbb(image_data):
 
 def process_image(image_file):
     try:
+        # Get original file size
+        image_file.seek(0, os.SEEK_END)
+        original_size = image_file.tell()
+        image_file.seek(0)
+
         img = Image.open(image_file)
+        original_format = img.format
+        
+        # Get original image details
+        original_details = get_image_details(img, original_size)
         
         # Convert RGBA to RGB if necessary
         if img.mode == 'RGBA':
@@ -67,23 +90,42 @@ def process_image(image_file):
             img = img.convert('RGB')
         
         # Resize if needed while maintaining aspect ratio
+        resized = False
         if img.width > MAX_WIDTH or img.height > MAX_HEIGHT:
             ratio = min(MAX_WIDTH/img.width, MAX_HEIGHT/img.height)
             new_size = (int(img.width * ratio), int(img.height * ratio))
             img = img.resize(new_size, Image.Resampling.LANCZOS)
+            resized = True
         
         # Save with optimization
         output = BytesIO()
-        img.save(output, format='JPEG', optimize=True, quality=85)
+        save_format = 'JPEG' if original_format not in ['PNG', 'GIF'] else original_format
+        
+        if save_format == 'JPEG':
+            img.save(output, format=save_format, optimize=True, quality=85)
+        elif save_format == 'PNG':
+            img.save(output, format=save_format, optimize=True)
+        else:
+            img.save(output, format=save_format)
+            
         output.seek(0)
-        return output
+        
+        # Get processed file size
+        processed_size = output.getbuffer().nbytes
+        
+        # Get processed image details
+        processed_details = get_image_details(img, processed_size)
+        processed_details['resized'] = resized
+        processed_details['compression_ratio'] = f"{(1 - processed_size/original_size) * 100:.1f}%"
+        
+        return output, original_details, processed_details
         
     except UnidentifiedImageError as e:
         logger.error(f"Error processing image: {str(e)}")
-        return None
+        return None, None, None
     except Exception as e:
         logger.error(f"Unexpected error processing image: {str(e)}")
-        return None
+        return None, None, None
 
 @image_bp.route('/upload', methods=['POST'])
 def upload_file():
@@ -99,11 +141,11 @@ def upload_file():
             return jsonify({'error': 'File type not allowed'}), 400
             
         if file.content_length and file.content_length > MAX_FILE_SIZE:
-            return jsonify({'error': 'File too large'}), 400
+            return jsonify({'error': f'File too large. Maximum size is {humanize.naturalsize(MAX_FILE_SIZE)}'}), 400
             
         try:
             # Process the image
-            processed_image = process_image(file)
+            processed_image, original_details, processed_details = process_image(file)
             if processed_image is None:
                 return jsonify({'error': 'Error processing image'}), 400
             
@@ -124,7 +166,9 @@ def upload_file():
                 'url': upload_result['url'],
                 'thumbnail': upload_result['thumbnail'],
                 'delete_url': upload_result['delete_url'],
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'original_details': original_details,
+                'processed_details': processed_details
             }
 
             # Save metadata to a JSON file
@@ -147,7 +191,11 @@ def upload_file():
                 'success': True,
                 'filename': filename,
                 'url': upload_result['url'],
-                'thumbnail': upload_result['thumbnail']
+                'thumbnail': upload_result['thumbnail'],
+                'details': {
+                    'original': original_details,
+                    'processed': processed_details
+                }
             }), 200
             
         except Exception as e:

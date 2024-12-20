@@ -10,11 +10,12 @@
     --primary-color: #0d6efd;
     --secondary-color: #6c757d;
     --success-color: #198754;
-    --background-color: #f8f9fa;
+    --background-color: #f0f2f5;
     --card-background: #ffffff;
-    --text-color: #212529;
-    --border-color: #dee2e6;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+    --text-color: #1a1a1a;
+    --border-color: #e4e6eb;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --hover-bg: #f8f9fa;
 }
 
 body {
@@ -29,27 +30,48 @@ body {
 
 .navbar {
     background-color: var(--card-background);
-    box-shadow: 0 2px 4px var(--shadow-color);
-    padding: 1rem 0;
+    box-shadow: 0 1px 2px var(--shadow-color);
+    padding: 0.8rem 0;
+    margin-bottom: 2rem;
 }
 
 .navbar-brand {
     font-weight: 600;
     color: var(--primary-color) !important;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
 }
 
 .navbar-brand i {
     margin-right: 0.5rem;
 }
 
+.nav-link {
+    color: var(--text-color) !important;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
 .card {
     background-color: var(--card-background);
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px var(--shadow-color);
-    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    margin-bottom: 1.5rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.card-title {
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
 }
 
 .upload-card {
@@ -63,6 +85,7 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    background-color: var(--hover-bg);
 }
 
 .upload-zone:hover {
@@ -79,6 +102,7 @@ body {
 .upload-zone p {
     margin: 0;
     color: var(--secondary-color);
+    font-size: 0.9rem;
 }
 
 .upload-zone input[type="file"] {
@@ -95,7 +119,7 @@ body {
     position: relative;
     overflow: hidden;
     border-radius: 8px;
-    background-color: var(--background-color);
+    background-color: var(--hover-bg);
     min-height: 300px;
     display: flex;
     align-items: center;
@@ -107,6 +131,7 @@ body {
     height: auto;
     display: block;
     transition: transform 0.3s ease;
+    border-radius: 8px;
 }
 
 .photo-container img:hover {
@@ -114,7 +139,7 @@ body {
 }
 
 .photo-details {
-    background-color: var(--background-color);
+    background-color: var(--hover-bg);
     border-radius: 8px;
     padding: 1rem;
     margin-top: 1rem;
@@ -123,86 +148,101 @@ body {
 .detail-item {
     display: flex;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
 }
 
 .detail-item i {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 4px;
-    margin-right: 0.5rem;
+    background-color: var(--card-background);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-right: 0.75rem;
     font-size: 0.9rem;
 }
 
 .reactions-section {
     border-top: 1px solid var(--border-color);
     padding-top: 1rem;
+    margin-top: 1rem;
 }
 
 .reactions-section h6 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--secondary-color);
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
 }
 
 .reactions-container {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-top: 0.5rem;
 }
 
 .reaction-btn {
-    background-color: var(--background-color);
+    background-color: var(--hover-bg);
     border: 1px solid var(--border-color);
     border-radius: 20px;
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.8rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
 }
 
 .reaction-btn:hover {
     background-color: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
-    transform: scale(1.05);
+    transform: translateY(-1px);
 }
 
 .reaction-btn .badge {
-    background-color: var(--secondary-color);
-    transition: background-color 0.2s ease;
+    background-color: var(--card-background);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
 
 .reaction-btn:hover .badge {
     background-color: white;
     color: var(--primary-color);
+    border-color: white;
 }
 
 .btn {
-    border-radius: 8px;
-    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
     font-weight: 500;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.9rem;
 }
 
 .btn i {
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .btn-primary {
     background-color: var(--primary-color);
     border: none;
+    color: white;
 }
 
 .btn-primary:hover {
@@ -211,8 +251,9 @@ body {
 }
 
 .btn-outline-primary {
-    border: 2px solid var(--primary-color);
+    border: 1px solid var(--primary-color);
     color: var(--primary-color);
+    background-color: transparent;
 }
 
 .btn-outline-primary:hover {
@@ -222,10 +263,11 @@ body {
 }
 
 .alert {
-    border-radius: 8px;
-    border: none;
+    border-radius: 6px;
+    border: 1px solid transparent;
     box-shadow: 0 2px 4px var(--shadow-color);
     animation: slideIn 0.3s ease;
+    font-size: 0.9rem;
 }
 
 @keyframes slideIn {
@@ -242,8 +284,8 @@ body {
 .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid var(--background-color);
-    border-top: 4px solid var(--primary-color);
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 2rem auto;
@@ -252,53 +294,6 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background-color: #121212;
-        --card-background: #1e1e1e;
-        --text-color: #ffffff;
-        --border-color: #2d2d2d;
-        --shadow-color: rgba(0, 0, 0, 0.3);
-    }
-
-    .navbar {
-        background-color: var(--card-background) !important;
-    }
-
-    .form-control {
-        background-color: var(--background-color);
-        color: var(--text-color);
-        border-color: var(--border-color);
-    }
-
-    .form-control:focus {
-        background-color: var(--background-color);
-        color: var(--text-color);
-    }
-
-    .btn-outline-primary {
-        color: var(--primary-color);
-    }
-
-    .reaction-btn {
-        background-color: var(--card-background);
-        color: var(--text-color);
-    }
-
-    .upload-zone {
-        background-color: var(--card-background);
-    }
-
-    .upload-zone:hover {
-        background-color: rgba(13, 110, 253, 0.1);
-    }
-
-    .photo-details {
-        background-color: var(--card-background);
-    }
 }
 
 /* Responsive design */
@@ -328,7 +323,7 @@ body {
     }
 
     .upload-zone {
-        padding: 1rem;
+        padding: 1.5rem;
     }
 
     .upload-zone i {
