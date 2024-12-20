@@ -1,323 +1,82 @@
-import json
 import os
-import random
-from datetime import datetime
-from io import BytesIO
+from flask import Flask, render_template, send_from_directory
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_minify import Minify
+from dotenv import load_dotenv
 import logging
 
-from flask import Flask, jsonify, render_template, request, send_from_directory, session, url_for
-from werkzeug.utils import secure_filename
-from dotenv import load_dotenv
-from PIL import Image, UnidentifiedImageError
+from modules.auth import auth_bp, login_manager
+from modules.image_handler import image_bp
+from modules.reactions import reactions_bp
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
-# Get base URL from environment or use default
-BASE_URL = os.getenv('BASE_URL', 'https://swapsnap.studyshare.pl')
-
-def get_full_url(path):
-    """Generate a full URL for a given path."""
-    if path.startswith('/'):
-        path = path[1:]
-    return f"{BASE_URL}/{path}"
-
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-# Image size limits
-MAX_SIZE = (1920, 1080)  # Maximum image size
-
-# Allowed emojis for reactions
-EMOJI_REACTIONS = ['👍', '❤️', '😂', '😱', '😡']
-
-def load_reactions():
-    """Load reactions from the reactions.json file."""
-    try:
-        REACTIONS_FILE = os.path.join(os.getcwd(), 'static', 'uploads', 'reactions.json')
-        if os.path.exists(REACTIONS_FILE):
-            with open(REACTIONS_FILE, 'r') as f:
-                return json.load(f)
-        return {}
-    except Exception as e:
-        logger.error(f"Error loading reactions: {str(e)}")
-        return {}
-
-def save_reactions(reactions):
-    """Save reactions to the reactions.json file."""
-    try:
-        REACTIONS_FILE = os.path.join(os.getcwd(), 'static', 'uploads', 'reactions.json')
-        with open(REACTIONS_FILE, 'w') as f:
-            json.dump(reactions, f)
-    except Exception as e:
-        logger.error(f"Error saving reactions: {str(e)}")
-
-def allowed_file(filename):
-    """Check if file extension is allowed."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def process_image(image_file):
-    """Process and optimize the uploaded image."""
-    try:
-        # Open the image
-        img = Image.open(image_file)
-        
-        # Convert RGBA to RGB if necessary
-        if img.mode in ('RGBA', 'LA'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[-1])
-            img = background
-        elif img.mode != 'RGB':
-            img = img.convert('RGB')
-
-        # Resize if too large (maintaining aspect ratio)
-        max_size = (1920, 1080)
-        if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
-
-        # Save to BytesIO
-        output = BytesIO()
-        img.save(output, format='JPEG', quality=85, optimize=True)
-        output.seek(0)
-        return output
-    except UnidentifiedImageError as e:
-        logger.error(f"Error processing image: {str(e)}")
-        raise ValueError("Invalid image file")
-    except Exception as e:
-        logger.error(f"Unexpected error processing image: {str(e)}")
-        raise ValueError("Error processing image")
-
+# Initialize Flask app
 app = Flask("SwapSnap", static_folder='static')
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-replace-in-production')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
-# Configure upload paths
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Move uploads to static folder
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Initialize Flask extensions
+Minify(app=app, html=True, js=True, cssless=True)
+login_manager.init_app(app)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+# Register blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(image_bp)
+app.register_blueprint(reactions_bp)
+
+# Ensure upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 @app.route('/')
 def index():
-    """Home page."""
-    # Initialize a unique session ID for the user
-    if 'user_id' not in session:
-        session['user_id'] = str(datetime.now().timestamp())
+    """Render the home page."""
     return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    """Handle file upload."""
-    try:
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file part'}), 400
-        
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
-
-        if not allowed_file(file.filename):
-            return jsonify({'error': 'File type not allowed'}), 400
-
-        try:
-            # Process the image
-            processed_image = process_image(file)
-            
-            # Generate secure filename with timestamp
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            original_filename = secure_filename(file.filename)
-            base_filename = os.path.splitext(original_filename)[0]
-            filename = f"{timestamp}_{base_filename}.jpg"
-            
-            # Save the processed image
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            with open(filepath, 'wb') as f:
-                f.write(processed_image.getvalue())
-
-            # Initialize reactions for this image
-            reactions = load_reactions()
-            reactions[filename] = {'reactions': {}}
-            save_reactions(reactions)
-            
-            photo_url = get_full_url(f'static/uploads/{filename}')
-            return jsonify({
-                'success': True,
-                'filename': filename,
-                'photo_url': photo_url
-            }), 200
-
-        except ValueError as e:
-            return jsonify({'error': str(e)}), 400
-        except Exception as e:
-            logger.error(f"Error saving file: {str(e)}")
-            return jsonify({'error': 'Error saving file'}), 500
-
-    except Exception as e:
-        logger.error(f"Unexpected error in upload: {str(e)}")
-        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     """Serve uploaded files."""
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-@app.route('/random_photo', methods=['GET'])
-def random_photo():
-    """Endpoint to get a random photo."""
-    photos = [f for f in os.listdir(UPLOAD_FOLDER) if allowed_file(f)]
-    if not photos:
-        return jsonify({'error': 'No photos available'}), 400
-
-    last_shown_photo = session.get('last_shown_photo')
-    available_photos = [p for p in photos if p != last_shown_photo]
-
-    if not available_photos:
-        available_photos = photos  # If all photos shown, reset
-
-    chosen_photo = random.choice(available_photos)
-    session['last_shown_photo'] = chosen_photo
-    
-    # Generate full URL using the BASE_URL
-    photo_url = get_full_url(f'static/uploads/{chosen_photo}')
-
-    reactions = load_reactions()
-    current_reactions = reactions.get(chosen_photo, {'reactions': {}})
-    formatted_reactions = [
-        {'user_id': user, 'emoji': emoji}
-        for emoji, users in current_reactions.get('reactions', {}).items()
-        for user in users
-    ]
-
-    return jsonify({
-        'photo_url': photo_url,
-        'reactions': formatted_reactions
-    }), 200
-
-@app.route('/react', methods=['POST'])
-def add_reaction():
-    """Add a reaction to a photo."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-
-        photo_url = data.get('photo_url')
-        emoji = data.get('emoji')
-
-        if not photo_url or not emoji:
-            return jsonify({'error': 'Missing photo_url or emoji'}), 400
-
-        # Extract filename from photo_url
-        filename = photo_url.split('/')[-1]
-
-        # Load current reactions
-        reactions = load_reactions()
-        
-        # Initialize reactions for this photo if it doesn't exist
-        if filename not in reactions:
-            reactions[filename] = {'reactions': {}}
-        
-        # Initialize emoji array if it doesn't exist
-        if 'reactions' not in reactions[filename]:
-            reactions[filename]['reactions'] = {}
-            
-        if emoji not in reactions[filename]['reactions']:
-            reactions[filename]['reactions'][emoji] = []
-
-        # Generate a simple user ID based on session
-        if 'user_id' not in session:
-            session['user_id'] = f"user_{random.randint(1000, 9999)}"
-        user_id = session['user_id']
-
-        # Add reaction if not already added by this user
-        if user_id not in reactions[filename]['reactions'][emoji]:
-            reactions[filename]['reactions'][emoji].append(user_id)
-            save_reactions(reactions)
-
-        # Format reactions for response
-        formatted_reactions = [
-            {'emoji': e, 'user_id': uid}
-            for e, users in reactions[filename]['reactions'].items()
-            for uid in users
-        ]
-
-        return jsonify({
-            'success': True,
-            'reactions': formatted_reactions
-        }), 200
-
-    except Exception as e:
-        logger.error(f"Error adding reaction: {str(e)}")
-        return jsonify({'error': 'Error adding reaction'}), 500
-
-@app.route('/auth')
-def auth():
-    """Render the authentication page."""
-    return render_template('auth.html')
-
-@app.route('/register', methods=['POST'])
-def register():
-    """Handle user registration."""
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-
-        if not all([username, email, password, confirm_password]):
-            flash('All fields are required', 'error')
-            return redirect(url_for('auth'))
-
-        if password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return redirect(url_for('auth'))
-
-        flash('Registration successful! Please login.', 'success')
-        return redirect(url_for('auth'))
-
-@app.route('/login', methods=['POST'])
-def login():
-    """Handle user login."""
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        if not all([email, password]):
-            flash('Email and password are required', 'error')
-            return redirect(url_for('auth'))
-
-        flash('Login successful!', 'success')
-        return redirect(url_for('index'))
-
-@app.route('/logout')
-def logout():
-    """Handle user logout."""
-    session.clear()
-    flash('You have been logged out', 'info')
-    return redirect(url_for('auth'))
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/health')
+@limiter.exempt
 def health_check():
-    """Health check endpoint for Render."""
+    """Health check endpoint for monitoring."""
     try:
-        # Check if we can access the upload directory
-        os.listdir(UPLOAD_FOLDER)
-        # Check if we can access the reactions file
-        load_reactions()
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now().isoformat(),
-            'upload_folder': 'accessible',
-            'reactions_file': 'accessible'
-        }), 200
+        return {'status': 'healthy'}, 200
     except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+        logger.error(f"Health check failed: {str(e)}")
+        return {'status': 'unhealthy', 'error': str(e)}, 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors."""
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors."""
+    logger.error(f"Internal server error: {str(error)}")
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    # Use environment variables for host and port
     port = int(os.environ.get('PORT', 8000))
     app.run(debug=False, host='0.0.0.0', port=port)
