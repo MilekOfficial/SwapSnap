@@ -9,6 +9,7 @@ import logging
 from modules.auth import auth_bp, login_manager
 from modules.image_handler import image_bp
 from modules.reactions import reactions_bp
+from modules.photo_manager import photo_bp
 
 # Set up logging
 logging.basicConfig(
@@ -42,6 +43,7 @@ limiter = Limiter(
 app.register_blueprint(auth_bp)
 app.register_blueprint(image_bp)
 app.register_blueprint(reactions_bp)
+app.register_blueprint(photo_bp)
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
