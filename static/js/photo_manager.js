@@ -3,18 +3,19 @@ class PhotoManager {
         this.currentPhoto = null;
         this.loadingPhoto = false;
         this.photoContainer = document.getElementById('photo-container');
+        this.photosGrid = document.getElementById('photos-grid');
         this.errorContainer = document.getElementById('error-container');
         this.uploadForm = document.getElementById('upload-form');
-        this.nextButton = document.getElementById('next-photo');
+        this.refreshButton = document.getElementById('refresh-photos');
         this.photoDetails = document.getElementById('photo-details');
         
         this.initializeEventListeners();
-        this.fetchRandomPhoto();
+        this.loadPhotos();
     }
 
     initializeEventListeners() {
-        if (this.nextButton) {
-            this.nextButton.addEventListener('click', () => this.fetchRandomPhoto());
+        if (this.refreshButton) {
+            this.refreshButton.addEventListener('click', () => this.loadPhotos());
         }
 
         if (this.uploadForm) {
@@ -65,67 +66,76 @@ class PhotoManager {
         }
     }
 
-    async fetchRandomPhoto() {
+    async loadPhotos() {
         if (this.loadingPhoto) return;
         
         try {
             this.loadingPhoto = true;
-            this.showLoading();
+            this.showGridLoading();
             
-            const response = await fetch('/api/photos/random');
+            const response = await fetch('/api/photos');
             const data = await response.json();
             
             if (!data.success) {
-                throw new Error(data.error || 'Error fetching photo');
+                throw new Error(data.error || 'Error fetching photos');
             }
             
-            this.currentPhoto = data.photo;
-            this.displayPhoto(data.photo);
-            this.displayPhotoDetails(data.photo.details);
-            await this.loadReactions(data.photo.filename);
+            this.displayPhotoGrid(data.photos);
             
         } catch (error) {
-            console.error('Error fetching random photo:', error);
-            this.showError('Failed to load photo. Please try again.');
+            console.error('Error fetching photos:', error);
+            this.showError('Failed to load photos. Please try again.');
         } finally {
             this.loadingPhoto = false;
         }
     }
 
-    showLoading() {
-        if (this.photoContainer) {
-            this.photoContainer.innerHTML = '<div class="loading-spinner"></div>';
+    showGridLoading() {
+        if (this.photosGrid) {
+            this.photosGrid.innerHTML = '<div class="loading-spinner"></div>';
         }
     }
 
-    displayPhoto(photo) {
-        if (!this.photoContainer) return;
+    displayPhotoGrid(photos) {
+        if (!this.photosGrid) return;
         
-        const img = document.createElement('img');
-        img.src = photo.url;
-        img.alt = 'Random photo';
-        img.className = 'img-fluid rounded shadow';
+        this.photosGrid.innerHTML = '';
         
-        // Show loading until image is loaded
-        this.showLoading();
+        if (!photos || !photos.length) {
+            this.photosGrid.innerHTML = `
+                <div class="text-center text-muted p-4">
+                    <i class="bi bi-images fs-1"></i>
+                    <p class="mt-2">No photos found</p>
+                </div>
+            `;
+            return;
+        }
         
-        img.onload = () => {
-            this.photoContainer.innerHTML = '';
-            this.photoContainer.appendChild(img);
-        };
-        
-        img.onerror = () => {
-            this.showError('Failed to load image');
-            this.photoContainer.innerHTML = '';
-        };
+        photos.forEach(photo => {
+            const photoElement = document.createElement('div');
+            photoElement.className = 'photo-item';
+            photoElement.innerHTML = `
+                <img src="${photo.thumbnail}" alt="Photo" loading="lazy">
+                <div class="overlay">
+                    <div class="photo-date">${new Date(photo.timestamp).toLocaleDateString()}</div>
+                </div>
+            `;
+            
+            photoElement.addEventListener('click', () => {
+                this.currentPhoto = photo;
+                this.displayPhotoDetails(photo);
+                this.loadReactions(photo.filename);
+            });
+            
+            this.photosGrid.appendChild(photoElement);
+        });
     }
 
-    displayPhotoDetails(details) {
-        if (!this.photoDetails || !details) return;
+    displayPhotoDetails(photo) {
+        if (!this.photoDetails || !photo.details) return;
 
-        const { original, processed } = details;
-        
-        if (!original || !processed) return;
+        const { processed } = photo.details;
+        if (!processed) return;
 
         const dateSpan = document.getElementById('photo-date');
         const dimensionsSpan = document.getElementById('photo-dimensions');
@@ -133,7 +143,7 @@ class PhotoManager {
         const typeSpan = document.getElementById('photo-type');
 
         if (dateSpan) {
-            const date = new Date();
+            const date = new Date(photo.timestamp);
             dateSpan.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
         }
 
@@ -143,9 +153,6 @@ class PhotoManager {
 
         if (sizeSpan) {
             sizeSpan.textContent = processed.size;
-            if (processed.compression_ratio) {
-                sizeSpan.textContent += ` (${processed.compression_ratio} smaller)`;
-            }
         }
 
         if (typeSpan) {
@@ -165,7 +172,7 @@ class PhotoManager {
         }
 
         try {
-            this.showLoading();
+            this.showGridLoading();
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
@@ -177,19 +184,8 @@ class PhotoManager {
                 this.showSuccess('Photo uploaded successfully!');
                 this.uploadForm.reset();
                 
-                // Create photo object from response
-                const photo = {
-                    url: data.url,
-                    thumbnail: data.thumbnail,
-                    filename: data.filename,
-                    details: data.details
-                };
-                
-                // Display the newly uploaded photo
-                this.currentPhoto = photo;
-                this.displayPhoto(photo);
-                this.displayPhotoDetails(data.details);
-                await this.loadReactions(data.filename);
+                // Reload all photos
+                await this.loadPhotos();
             } else {
                 this.showError(data.error || 'Failed to upload photo');
             }

@@ -9,6 +9,7 @@ import requests
 import base64
 import json
 import humanize
+import random
 
 image_bp = Blueprint('image', __name__)
 logger = logging.getLogger(__name__)
@@ -30,6 +31,46 @@ def get_image_details(img, file_size):
         'size': humanize.naturalsize(file_size),
         'aspect_ratio': f"{img.width}:{img.height}"
     }
+
+def fetch_imgbb_images():
+    """Fetch all images from ImgBB account."""
+    try:
+        imgbb_key = os.getenv('IMGBB_API_KEY')
+        if not imgbb_key:
+            logger.error("IMGBB_API_KEY not found in environment variables")
+            return None
+
+        # Fetch images from ImgBB
+        url = f"https://api.imgbb.com/1/account/images?key={imgbb_key}"
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        data = response.json()
+        if data.get('status') == 200:
+            images = []
+            for img in data.get('data', []):
+                image_data = {
+                    'url': img['url'],
+                    'thumbnail': img.get('thumb', {}).get('url', img['url']),
+                    'filename': img['title'],
+                    'delete_url': img.get('delete_url'),
+                    'timestamp': datetime.fromtimestamp(img['time']).isoformat(),
+                    'details': {
+                        'processed': {
+                            'width': img['width'],
+                            'height': img['height'],
+                            'size': humanize.naturalsize(img['size']),
+                            'format': img['extension'].lower()
+                        }
+                    }
+                }
+                images.append(image_data)
+            return images
+        return None
+
+    except Exception as e:
+        logger.error(f"Error fetching images from imgbb: {str(e)}")
+        return None
 
 def upload_to_imgbb(image_data):
     """Upload image to imgbb and return the URL."""
@@ -126,6 +167,41 @@ def process_image(image_file):
     except Exception as e:
         logger.error(f"Unexpected error processing image: {str(e)}")
         return None, None, None
+
+@image_bp.route('/api/photos/random', methods=['GET'])
+def get_random_photo():
+    """Get a random photo from ImgBB."""
+    try:
+        images = fetch_imgbb_images()
+        if not images:
+            return jsonify({'error': 'No images found'}), 404
+
+        photo = random.choice(images)
+        return jsonify({
+            'success': True,
+            'photo': photo
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting random photo: {str(e)}")
+        return jsonify({'error': 'Failed to get random photo'}), 500
+
+@image_bp.route('/api/photos', methods=['GET'])
+def get_all_photos():
+    """Get all photos from ImgBB."""
+    try:
+        images = fetch_imgbb_images()
+        if not images:
+            return jsonify({'error': 'No images found'}), 404
+
+        return jsonify({
+            'success': True,
+            'photos': images
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting photos: {str(e)}")
+        return jsonify({'error': 'Failed to get photos'}), 500
 
 @image_bp.route('/upload', methods=['POST'])
 def upload_file():
