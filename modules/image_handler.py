@@ -41,33 +41,41 @@ def fetch_imgbb_images():
             return None
 
         # Fetch images from ImgBB
-        url = f"https://api.imgbb.com/1/account/images?key={imgbb_key}"
+        url = f"https://api.imgbb.com/1/account/images?key={imgbb_key}&page=1"
         response = requests.get(url)
         response.raise_for_status()
         
         data = response.json()
-        if data.get('status') == 200:
+        if data.get('status') == 200 and 'data' in data:
             images = []
-            for img in data.get('data', []):
-                image_data = {
-                    'url': img['url'],
-                    'thumbnail': img.get('thumb', {}).get('url', img['url']),
-                    'filename': img['title'],
-                    'delete_url': img.get('delete_url'),
-                    'timestamp': datetime.fromtimestamp(img['time']).isoformat(),
-                    'details': {
-                        'processed': {
-                            'width': img['width'],
-                            'height': img['height'],
-                            'size': humanize.naturalsize(img['size']),
-                            'format': img['extension'].lower()
+            for img in data['data'].get('images', []):
+                try:
+                    image_data = {
+                        'url': img['url'],
+                        'thumbnail': img.get('thumb', {}).get('url') or img['url'],
+                        'filename': img.get('title', 'Untitled'),
+                        'delete_url': img.get('delete_url', ''),
+                        'timestamp': datetime.fromtimestamp(int(img.get('time', 0))).isoformat(),
+                        'details': {
+                            'processed': {
+                                'width': int(img.get('width', 0)),
+                                'height': int(img.get('height', 0)),
+                                'size': humanize.naturalsize(int(img.get('size', 0))),
+                                'format': img.get('extension', '').lower()
+                            }
                         }
                     }
-                }
-                images.append(image_data)
+                    images.append(image_data)
+                except (KeyError, ValueError) as e:
+                    logger.error(f"Error processing image data: {str(e)}")
+                    continue
             return images
+        logger.error(f"Invalid response from ImgBB: {data}")
         return None
 
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error fetching images from imgbb: {str(e)}")
+        return None
     except Exception as e:
         logger.error(f"Error fetching images from imgbb: {str(e)}")
         return None
@@ -216,10 +224,15 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'File type not allowed'}), 400
             
-        if file.content_length and file.content_length > MAX_FILE_SIZE:
-            return jsonify({'error': f'File too large. Maximum size is {humanize.naturalsize(MAX_FILE_SIZE)}'}), 400
-            
         try:
+            # Get file size without reading entire file into memory
+            file.seek(0, os.SEEK_END)
+            file_size = file.tell()
+            file.seek(0)
+            
+            if file_size > MAX_FILE_SIZE:
+                return jsonify({'error': f'File too large. Maximum size is {humanize.naturalsize(MAX_FILE_SIZE)}'}), 400
+            
             # Process the image
             processed_image, original_details, processed_details = process_image(file)
             if processed_image is None:
@@ -230,53 +243,51 @@ def upload_file():
             if not upload_result:
                 return jsonify({'error': 'Error uploading to image host'}), 500
 
-            # Store the image data
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            original_filename = secure_filename(file.filename)
-            base_filename = os.path.splitext(original_filename)[0]
-            filename = f"{timestamp}_{base_filename}.jpg"
-
-            # Save metadata to database or file
-            image_data = {
-                'filename': filename,
-                'url': upload_result['url'],
-                'thumbnail': upload_result['thumbnail'],
-                'delete_url': upload_result['delete_url'],
-                'timestamp': datetime.now().isoformat(),
-                'original_details': original_details,
-                'processed_details': processed_details
-            }
-
-            # Save metadata to a JSON file
-            metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
-            try:
-                if os.path.exists(metadata_file):
-                    with open(metadata_file, 'r') as f:
-                        metadata = json.load(f)
-                else:
-                    metadata = {}
-                
-                metadata[filename] = image_data
-                
-                with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)
-            except Exception as e:
-                logger.error(f"Error saving metadata: {str(e)}")
-
-            return jsonify({
+            # Create response data
+            response_data = {
                 'success': True,
-                'filename': filename,
                 'url': upload_result['url'],
                 'thumbnail': upload_result['thumbnail'],
+                'filename': secure_filename(file.filename),
+                'timestamp': datetime.now().isoformat(),
                 'details': {
                     'original': original_details,
-                    'processed': processed_details
+                    'processed': {
+                        'width': upload_result['width'],
+                        'height': upload_result['height'],
+                        'size': humanize.naturalsize(upload_result['size']),
+                        'format': os.path.splitext(file.filename)[1][1:].lower()
+                    }
                 }
-            }), 200
+            }
+
+            # Save metadata
+            try:
+                metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
+                metadata = {}
+                
+                if os.path.exists(metadata_file):
+                    try:
+                        with open(metadata_file, 'r') as f:
+                            metadata = json.load(f)
+                    except json.JSONDecodeError:
+                        logger.warning("Invalid metadata file, creating new one")
+                
+                metadata[response_data['filename']] = response_data
+                
+                os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
+                with open(metadata_file, 'w') as f:
+                    json.dump(metadata, f, indent=2)
+                    
+            except Exception as e:
+                logger.error(f"Error saving metadata: {str(e)}")
+                # Continue even if metadata save fails
+            
+            return jsonify(response_data), 200
             
         except Exception as e:
-            logger.error(f"Error saving file: {str(e)}")
-            return jsonify({'error': 'Error saving file'}), 500
+            logger.error(f"Error processing upload: {str(e)}")
+            return jsonify({'error': 'Error processing upload'}), 500
             
     except Exception as e:
         logger.error(f"Unexpected error in upload: {str(e)}")
