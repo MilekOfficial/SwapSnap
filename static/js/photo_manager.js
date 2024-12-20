@@ -6,6 +6,7 @@ class PhotoManager {
         this.errorContainer = document.getElementById('error-container');
         this.uploadForm = document.getElementById('upload-form');
         this.nextButton = document.getElementById('next-photo');
+        this.photoDetails = document.getElementById('photo-details');
         
         this.initializeEventListeners();
         this.fetchRandomPhoto();
@@ -18,6 +19,27 @@ class PhotoManager {
 
         if (this.uploadForm) {
             this.uploadForm.addEventListener('submit', (e) => this.handleUpload(e));
+            
+            // Add drag and drop support
+            const uploadZone = this.uploadForm.querySelector('.upload-zone');
+            if (uploadZone) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    uploadZone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
+
+                uploadZone.addEventListener('dragenter', () => uploadZone.classList.add('dragover'));
+                uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+                uploadZone.addEventListener('drop', (e) => {
+                    uploadZone.classList.remove('dragover');
+                    const fileInput = this.uploadForm.querySelector('input[type="file"]');
+                    if (fileInput && e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                    }
+                });
+            }
         }
     }
 
@@ -25,7 +47,7 @@ class PhotoManager {
         if (this.errorContainer) {
             this.errorContainer.innerHTML = `
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    ${message}
+                    <i class="bi bi-exclamation-triangle-fill"></i> ${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
@@ -36,7 +58,7 @@ class PhotoManager {
         if (this.errorContainer) {
             this.errorContainer.innerHTML = `
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    ${message}
+                    <i class="bi bi-check-circle-fill"></i> ${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
@@ -59,6 +81,7 @@ class PhotoManager {
             
             this.currentPhoto = data.photo;
             this.displayPhoto(data.photo);
+            this.displayPhotoDetails(data.photo.details);
             await this.loadReactions(data.photo.filename);
             
         } catch (error) {
@@ -71,10 +94,7 @@ class PhotoManager {
 
     showLoading() {
         if (this.photoContainer) {
-            const loadingSpinner = document.createElement('div');
-            loadingSpinner.className = 'loading-spinner';
-            this.photoContainer.innerHTML = '';
-            this.photoContainer.appendChild(loadingSpinner);
+            this.photoContainer.innerHTML = '<div class="loading-spinner"></div>';
         }
     }
 
@@ -100,6 +120,39 @@ class PhotoManager {
         };
     }
 
+    displayPhotoDetails(details) {
+        if (!this.photoDetails || !details) return;
+
+        const { original, processed } = details;
+        
+        if (!original || !processed) return;
+
+        const dateSpan = document.getElementById('photo-date');
+        const dimensionsSpan = document.getElementById('photo-dimensions');
+        const sizeSpan = document.getElementById('photo-size');
+        const typeSpan = document.getElementById('photo-type');
+
+        if (dateSpan) {
+            const date = new Date();
+            dateSpan.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        if (dimensionsSpan) {
+            dimensionsSpan.textContent = `${processed.width} × ${processed.height} px`;
+        }
+
+        if (sizeSpan) {
+            sizeSpan.textContent = processed.size;
+            if (processed.compression_ratio) {
+                sizeSpan.textContent += ` (${processed.compression_ratio} smaller)`;
+            }
+        }
+
+        if (typeSpan) {
+            typeSpan.textContent = processed.format.toUpperCase();
+        }
+    }
+
     async handleUpload(e) {
         e.preventDefault();
         
@@ -112,6 +165,7 @@ class PhotoManager {
         }
 
         try {
+            this.showLoading();
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
@@ -119,17 +173,29 @@ class PhotoManager {
 
             const data = await response.json();
 
-            if (data.success) {
+            if (response.ok && data.success) {
                 this.showSuccess('Photo uploaded successfully!');
                 this.uploadForm.reset();
+                
+                // Create photo object from response
+                const photo = {
+                    url: data.url,
+                    thumbnail: data.thumbnail,
+                    filename: data.filename,
+                    details: data.details
+                };
+                
                 // Display the newly uploaded photo
-                this.displayPhoto(data);
+                this.currentPhoto = photo;
+                this.displayPhoto(photo);
+                this.displayPhotoDetails(data.details);
+                await this.loadReactions(data.filename);
             } else {
                 this.showError(data.error || 'Failed to upload photo');
             }
         } catch (error) {
             console.error('Error uploading photo:', error);
-            this.showError('Error uploading photo');
+            this.showError('Error uploading photo. Please try again.');
         }
     }
 
@@ -179,11 +245,11 @@ class PhotoManager {
             if (data.success) {
                 this.updateReactions(data.reactions);
             } else {
-                this.showError('Failed to add reaction');
+                this.showError(data.error || 'Failed to add reaction');
             }
         } catch (error) {
             console.error('Error adding reaction:', error);
-            this.showError('Error adding reaction');
+            this.showError('Failed to add reaction');
         }
     }
 }
