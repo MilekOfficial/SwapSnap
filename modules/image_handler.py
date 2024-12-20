@@ -5,6 +5,9 @@ import os
 import logging
 from io import BytesIO
 from datetime import datetime
+import requests
+import base64
+import json
 
 image_bp = Blueprint('image', __name__)
 logger = logging.getLogger(__name__)
@@ -16,6 +19,40 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def upload_to_imgbb(image_data):
+    """Upload image to imgbb and return the URL."""
+    try:
+        imgbb_key = os.getenv('IMGBB_API_KEY')
+        if not imgbb_key:
+            logger.error("IMGBB_API_KEY not found in environment variables")
+            return None
+
+        # Convert image data to base64
+        base64_image = base64.b64encode(image_data.getvalue()).decode('utf-8')
+
+        # Upload to imgbb
+        url = "https://api.imgbb.com/1/upload"
+        payload = {
+            "key": imgbb_key,
+            "image": base64_image,
+        }
+
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
+        
+        data = response.json()
+        if data.get('success'):
+            return {
+                'url': data['data']['url'],
+                'delete_url': data['data']['delete_url'],
+                'thumbnail': data['data']['thumb']['url']
+            }
+        return None
+
+    except Exception as e:
+        logger.error(f"Error uploading to imgbb: {str(e)}")
+        return None
 
 def process_image(image_file):
     try:
@@ -70,21 +107,47 @@ def upload_file():
             if processed_image is None:
                 return jsonify({'error': 'Error processing image'}), 400
             
-            # Generate unique filename with timestamp
+            # Upload to imgbb
+            upload_result = upload_to_imgbb(processed_image)
+            if not upload_result:
+                return jsonify({'error': 'Error uploading to image host'}), 500
+
+            # Store the image data
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             original_filename = secure_filename(file.filename)
             base_filename = os.path.splitext(original_filename)[0]
             filename = f"{timestamp}_{base_filename}.jpg"
-            
-            # Save the processed image
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            with open(filepath, 'wb') as f:
-                f.write(processed_image.getvalue())
+
+            # Save metadata to database or file
+            image_data = {
+                'filename': filename,
+                'url': upload_result['url'],
+                'thumbnail': upload_result['thumbnail'],
+                'delete_url': upload_result['delete_url'],
+                'timestamp': datetime.now().isoformat()
+            }
+
+            # Save metadata to a JSON file
+            metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
+            try:
+                if os.path.exists(metadata_file):
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+                else:
+                    metadata = {}
                 
+                metadata[filename] = image_data
+                
+                with open(metadata_file, 'w') as f:
+                    json.dump(metadata, f, indent=2)
+            except Exception as e:
+                logger.error(f"Error saving metadata: {str(e)}")
+
             return jsonify({
                 'success': True,
                 'filename': filename,
-                'url': f'/uploads/{filename}'
+                'url': upload_result['url'],
+                'thumbnail': upload_result['thumbnail']
             }), 200
             
         except Exception as e:
