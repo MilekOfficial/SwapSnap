@@ -9,7 +9,7 @@ import requests
 import base64
 import json
 import humanize
-import random
+from .photo_manager import save_photo_metadata
 
 image_bp = Blueprint('image', __name__, url_prefix='/api')
 logger = logging.getLogger(__name__)
@@ -31,40 +31,6 @@ def get_image_details(img, file_size):
         'size': humanize.naturalsize(file_size),
         'aspect_ratio': f"{img.width}:{img.height}"
     }
-
-def load_photos():
-    """Load photos from the metadata file."""
-    try:
-        metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
-        if not os.path.exists(metadata_file):
-            return {}
-        
-        with open(metadata_file, 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error(f"Error loading photos: {str(e)}")
-        return {}
-
-def save_photo_metadata(photo_data):
-    """Save photo metadata to the JSON file."""
-    try:
-        metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
-        metadata = load_photos()
-        
-        # Add the new photo
-        metadata[photo_data['filename']] = photo_data
-        
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
-        
-        # Save to file
-        with open(metadata_file, 'w') as f:
-            json.dump(metadata, f, indent=2)
-            
-        return True
-    except Exception as e:
-        logger.error(f"Error saving photo metadata: {str(e)}")
-        return False
 
 def upload_to_imgbb(image_data):
     """Upload image to imgbb and return the URL."""
@@ -161,50 +127,6 @@ def process_image(image_file):
     except Exception as e:
         logger.error(f"Unexpected error processing image: {str(e)}")
         return None, None, None
-
-@image_bp.route('/photos/random', methods=['GET'])
-def get_random_photo():
-    """Get a random photo from the saved photos."""
-    try:
-        photos = load_photos()
-        if not photos:
-            return jsonify({'error': 'No photos found'}), 404
-
-        # Get a random photo from the metadata
-        filename = random.choice(list(photos.keys()))
-        photo = photos[filename]
-
-        return jsonify({
-            'success': True,
-            'photo': photo
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting random photo: {str(e)}")
-        return jsonify({'error': 'Failed to get random photo'}), 500
-
-@image_bp.route('/photos', methods=['GET'])
-def get_all_photos():
-    """Get all saved photos."""
-    try:
-        photos = load_photos()
-        if not photos:
-            return jsonify({'error': 'No photos found'}), 404
-
-        # Convert dict to list for the frontend
-        photos_list = list(photos.values())
-        
-        # Sort by timestamp, newest first
-        photos_list.sort(key=lambda x: x['timestamp'], reverse=True)
-
-        return jsonify({
-            'success': True,
-            'photos': photos_list
-        })
-
-    except Exception as e:
-        logger.error(f"Error getting photos: {str(e)}")
-        return jsonify({'error': 'Failed to get photos'}), 500
 
 @image_bp.route('/upload', methods=['POST'])
 def upload_file():
