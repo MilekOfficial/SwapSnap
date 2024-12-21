@@ -32,53 +32,39 @@ def get_image_details(img, file_size):
         'aspect_ratio': f"{img.width}:{img.height}"
     }
 
-def fetch_imgbb_images():
-    """Fetch all images from ImgBB account."""
+def load_photos():
+    """Load photos from the metadata file."""
     try:
-        imgbb_key = os.getenv('IMGBB_API_KEY')
-        if not imgbb_key:
-            logger.error("IMGBB_API_KEY not found in environment variables")
-            return None
-
-        # Fetch images from ImgBB
-        url = f"https://api.imgbb.com/1/account/images?key={imgbb_key}&page=1"
-        response = requests.get(url)
-        response.raise_for_status()
+        metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
+        if not os.path.exists(metadata_file):
+            return {}
         
-        data = response.json()
-        if data.get('status') == 200 and 'data' in data:
-            images = []
-            for img in data['data'].get('images', []):
-                try:
-                    image_data = {
-                        'url': img['url'],
-                        'thumbnail': img.get('thumb', {}).get('url') or img['url'],
-                        'filename': img.get('title', 'Untitled'),
-                        'delete_url': img.get('delete_url', ''),
-                        'timestamp': datetime.fromtimestamp(int(img.get('time', 0))).isoformat(),
-                        'details': {
-                            'processed': {
-                                'width': int(img.get('width', 0)),
-                                'height': int(img.get('height', 0)),
-                                'size': humanize.naturalsize(int(img.get('size', 0))),
-                                'format': img.get('extension', '').lower()
-                            }
-                        }
-                    }
-                    images.append(image_data)
-                except (KeyError, ValueError) as e:
-                    logger.error(f"Error processing image data: {str(e)}")
-                    continue
-            return images
-        logger.error(f"Invalid response from ImgBB: {data}")
-        return None
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error fetching images from imgbb: {str(e)}")
-        return None
+        with open(metadata_file, 'r') as f:
+            return json.load(f)
     except Exception as e:
-        logger.error(f"Error fetching images from imgbb: {str(e)}")
-        return None
+        logger.error(f"Error loading photos: {str(e)}")
+        return {}
+
+def save_photo_metadata(photo_data):
+    """Save photo metadata to the JSON file."""
+    try:
+        metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
+        metadata = load_photos()
+        
+        # Add the new photo
+        metadata[photo_data['filename']] = photo_data
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
+        
+        # Save to file
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=2)
+            
+        return True
+    except Exception as e:
+        logger.error(f"Error saving photo metadata: {str(e)}")
+        return False
 
 def upload_to_imgbb(image_data):
     """Upload image to imgbb and return the URL."""
@@ -178,13 +164,16 @@ def process_image(image_file):
 
 @image_bp.route('/photos/random', methods=['GET'])
 def get_random_photo():
-    """Get a random photo from ImgBB."""
+    """Get a random photo from the saved photos."""
     try:
-        images = fetch_imgbb_images()
-        if not images:
-            return jsonify({'error': 'No images found'}), 404
+        photos = load_photos()
+        if not photos:
+            return jsonify({'error': 'No photos found'}), 404
 
-        photo = random.choice(images)
+        # Get a random photo from the metadata
+        filename = random.choice(list(photos.keys()))
+        photo = photos[filename]
+
         return jsonify({
             'success': True,
             'photo': photo
@@ -196,15 +185,21 @@ def get_random_photo():
 
 @image_bp.route('/photos', methods=['GET'])
 def get_all_photos():
-    """Get all photos from ImgBB."""
+    """Get all saved photos."""
     try:
-        images = fetch_imgbb_images()
-        if not images:
-            return jsonify({'error': 'No images found'}), 404
+        photos = load_photos()
+        if not photos:
+            return jsonify({'error': 'No photos found'}), 404
+
+        # Convert dict to list for the frontend
+        photos_list = list(photos.values())
+        
+        # Sort by timestamp, newest first
+        photos_list.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return jsonify({
             'success': True,
-            'photos': images
+            'photos': photos_list
         })
 
     except Exception as e:
@@ -244,12 +239,15 @@ def upload_file():
                 return jsonify({'error': 'Error uploading to image host'}), 500
 
             # Create response data
-            response_data = {
+            timestamp = datetime.now().isoformat()
+            filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+            
+            photo_data = {
                 'success': True,
                 'url': upload_result['url'],
                 'thumbnail': upload_result['thumbnail'],
-                'filename': secure_filename(file.filename),
-                'timestamp': datetime.now().isoformat(),
+                'filename': filename,
+                'timestamp': timestamp,
                 'details': {
                     'original': original_details,
                     'processed': {
@@ -262,28 +260,10 @@ def upload_file():
             }
 
             # Save metadata
-            try:
-                metadata_file = os.path.join(current_app.config['UPLOAD_FOLDER'], 'metadata.json')
-                metadata = {}
-                
-                if os.path.exists(metadata_file):
-                    try:
-                        with open(metadata_file, 'r') as f:
-                            metadata = json.load(f)
-                    except json.JSONDecodeError:
-                        logger.warning("Invalid metadata file, creating new one")
-                
-                metadata[response_data['filename']] = response_data
-                
-                os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
-                with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)
-                    
-            except Exception as e:
-                logger.error(f"Error saving metadata: {str(e)}")
-                # Continue even if metadata save fails
+            if not save_photo_metadata(photo_data):
+                logger.warning("Failed to save photo metadata")
             
-            return jsonify(response_data), 200
+            return jsonify(photo_data), 200
             
         except Exception as e:
             logger.error(f"Error processing upload: {str(e)}")
