@@ -7,3 +7,4 @@ env/
 venv/
 uploads/*
 !uploads/.gitkeep
+!uploads/metadata.json
