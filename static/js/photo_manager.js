@@ -173,7 +173,7 @@ class PhotoManager {
 
         try {
             this.showGridLoading();
-            const response = await fetch('/upload', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             });

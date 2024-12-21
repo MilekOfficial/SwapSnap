@@ -11,7 +11,7 @@ import json
 import humanize
 import random
 
-image_bp = Blueprint('image', __name__)
+image_bp = Blueprint('image', __name__, url_prefix='/api')
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -176,7 +176,7 @@ def process_image(image_file):
         logger.error(f"Unexpected error processing image: {str(e)}")
         return None, None, None
 
-@image_bp.route('/api/photos/random', methods=['GET'])
+@image_bp.route('/photos/random', methods=['GET'])
 def get_random_photo():
     """Get a random photo from ImgBB."""
     try:
@@ -194,7 +194,7 @@ def get_random_photo():
         logger.error(f"Error getting random photo: {str(e)}")
         return jsonify({'error': 'Failed to get random photo'}), 500
 
-@image_bp.route('/api/photos', methods=['GET'])
+@image_bp.route('/photos', methods=['GET'])
 def get_all_photos():
     """Get all photos from ImgBB."""
     try:
