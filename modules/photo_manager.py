@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, current_app, session, request
 import logging
 import json
 
-photo_bp = Blueprint('photo', __name__, url_prefix='/api')
+photo_bp = Blueprint('photo', __name__)  
 logger = logging.getLogger(__name__)
 
 def get_metadata():
@@ -60,7 +60,7 @@ def save_photo_metadata(photo_data):
         logger.error(f"Error saving photo metadata: {str(e)}")
         return False
 
-@photo_bp.route('/photos', methods=['GET'])
+@photo_bp.route('/api/photos', methods=['GET'])
 def get_photos():
     """API endpoint to get all photos."""
     try:
@@ -82,7 +82,7 @@ def get_photos():
             'error': 'Failed to get photos'
         }), 500
 
-@photo_bp.route('/photos/random', methods=['GET'])
+@photo_bp.route('/api/photos/random', methods=['GET'])
 def random_photo():
     """Get a random photo, avoiding the last shown photo if possible."""
     try:
